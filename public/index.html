@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<!--------------------------
+  - GazeMapping : index.html
+  ------------------------->
+<head>
+    <meta charset="UTF-8">
+     <link rel="icon" type="image/x-icon" href="gazemapping.ico">
+    <link rel="shortcut icon" href="gazeMapping.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="application-name" content="GazeMapping">
+
+    <meta name="author" content="Miguel Gea">
+    <meta name="version" content="1.0.0">
+    <meta name="description" content="Herramienta de análisis Eye Tracking GazeMapping para Diseño de Interfaces de Usuario">
+    <meta name="keywords" content="UX, Eye tracking, Heatmap, UI Design, GazeMapping, Análisis de Usuario">
+
+    <title>GazeMapping</title>
+    
+    <meta name="author" content="Miguel Gea">
+    <meta name="subject" content="Diseño de Interfaces de Usuario">
+    <meta name="version" content="1.2.0">
+    <meta name="description" content="Proyecto de Eye Tracking basado en WebGazer.js">
+    <link rel="icon" type="image/x-icon" href="GazeMapping.ico">
+
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --bg-dark: #1a1a1a;
+            --card-bg: #252525;
+            --text-light: #eee;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.6;
+        }
+
+       /* Reseteo total de enlaces */
+        a {
+            color: inherit;           /* Toma el color del texto del contenedor padre */
+            /* text-decoration: none;  */  /* Quita el subrayado */
+            
+        }
+
+        /* Evita el color morado de enlaces ya visitados */
+        a:visited {
+            color: inherit;
+        }
+
+        /* Opcional: Un cambio sutil solo al pasar el ratón para saber que es clicable */
+        a:hover {
+            color: #2ecc71; /* El verde de GazeMapping */
+        }
+
+        /* --- HEADER & BANNER --- */
+        .header-banner {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('banner_gazemapping.png');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 4px solid var(--primary);
+        }
+
+        .logo-title {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .logo-title span { color: var(--primary); }
+
+        /* --- CONTENIDO --- */
+        .container {
+            max-width: 900px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .info-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-left: 5px solid var(--primary);
+        }
+
+        h2 { color: var(--primary); margin-top: 0; }
+
+        /* --- MENÚ DE NAVEGACIÓN (BOTONES) --- */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .menu-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            background: #2d2d2d;
+        }
+
+        .icon { font-size: 40px; margin-bottom: 15px; }
+        .card-title { font-weight: bold; font-size: 1.2rem; margin-bottom: 8px; }
+        .card-desc { font-size: 0.9rem; color: #aaa; }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+        }
+
+        .tech-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #333;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--primary);
+            margin-top: 10px;
+        }
+
+
+
+        .btn-desplegar {
+    width: 100%;
+    max-width: 900px;
+    background: #333;
+    color: var(--primary);
+    border: 2px solid #444;
+    padding: 15px;
+    margin-top: 30px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: 0.3s;
+}
+
+.btn-desplegar:hover {
+    background: #444;
+    border-color: var(--primary);
+}
+
+.panel-contenido {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out, opacity 0.3s ease;
+    opacity: 0;
+    width: 100%;
+    max-width: 900px;
+}
+
+.panel-contenido.open {
+    max-height: 1000px; /* Suficiente para el contenido */
+    opacity: 1;
+    margin-top: 20px;
+}
+
+.info-section {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid #333;
+}
+
+
+    </style>
+</head>
+<body>
+
+    <header class="header-banner">
+        <h1 class="logo-title">Gaze<span>Mapping</span></h1>
+        <img src="./gazemapping.png" style="width:200px">   
+        <p>Web Eye Tracking Analysis & Heatmap Visualization tool</p>
+    </header>
+
+    <div class="container">
+        
+
+<div class="menu-grid">
+ 
+    <a href="testing.html" target="_blank" class="menu-card">
+        <div class="icon">🚀</div>
+        <div class="card-title">Iniciar Test</div>
+    </a>
+    <a href="poi.html" target="_blank" class="menu-card">
+        <div class="icon">📍</div>
+        <div class="card-title">Puntos de Interés</div>
+    </a>
+    <a href="heatmap.html" target="_blank" class="menu-card">
+        <div class="icon">🔥</div>
+        <div class="card-title">Visualización</div>
+    </a>
+</div>
+
+<button class="btn-desplegar" onclick="toggleAbout()">
+    Sobre el Proyecto GazeMapping 🔽
+</button>
+
+<div id="panel-about" class="panel-contenido">
+    <div class="info-section">
+        <h2>Documentación Técnica</h2>
+        <p>
+            <strong>GazeMapping</strong> es una utilidad diseñada para la asignatura 
+            <em>Diseño de Interfaces de Usuario</em>  
+            </p>
+        
+        
+
+        <div style="text-align: left; margin-top: 20px;">
+            <p>Permie diseñar pruebas de Usabilidad basadas en Eye Tracking basado en webcam utilizando la librería WebGazer.js de Univ. Brown.</p>
+            <p><strong>Autor:</strong> Miguel Gea</p>
+            <p><strong>Versión:</strong> 1.0.0, 2026</p>
+            <p><strong>Usar en:</strong> <a href="https://github.com/mgea/UX_caseStudy"> UX Case Study (DIU)</a></p>
+
+
+            <p><strong>Tecnología:</strong> WebGazer.js v3.4.0</p>
+            <ul> 
+                <li> Github: <a href="https://github.com/brownhci/WebGazer"> https://github.com/brownhci/WebGazer </a></li>
+                <li> website: <a href="https://webgazer.cs.brown.edu/">https://webgazer.cs.brown.edu//li></a></li>
+            </ul>
+ 
+
+         
+            <p><strong>Metodología:</strong> Captura pasiva mediante Webcam (60fps recomendados).</p>
+        </div>
+        <div class="tech-badge"><a href="https://github.com/mgea/gazemapping" target="_blank"> Repositorio Github</a> </div>
+    </div>
+</div>
+
+
+
+
+   
+    </div>
+
+    <footer>
+        <p>CC BYNCSA Miguel Gea | Diseño de Interfaces de Usuario | Versión 1.0.0</p>
+
+    </footer>
+
+
+<script>
+
+function toggleAbout() {
+    const panel = document.getElementById('panel-about');
+    const btn = document.querySelector('.btn-desplegar');
+    
+    panel.classList.toggle('open');
+    
+    if (panel.classList.contains('open')) {
+        btn.innerHTML = "Cerrar Información 🔼 ";
+        // Scroll suave hacia el contenido
+        setTimeout(() => {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+    } else {
+        btn.innerHTML = " Sobre el Proyecto GazeMapping 🔽";
+    }
+}
+
+</script>
+
+
+</body>
+</html>

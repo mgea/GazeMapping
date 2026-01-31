@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+<!--------------------------
+  - GazeMapping : heatmap
+  ------------------------->
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="gazemapping.ico">
+    <link rel="shortcut icon" href="gazeMapping.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="application-name" content="GazeMapping">
+    <meta name="author" content="Miguel Gea">
+    <meta name="version" content="1.0.0">
+    <meta name="description" content="Herramienta de análisis visual GazeMapping para Diseño de Interfaces de Usuario">
+    <meta name="keywords" content="UX, Eye tracking, Heatmap, UI Design, GazeMapping, Análisis de Usuario">
+    
+    <meta name="subject" content="Diseño de Interfaces de Usuario">
+    <title>Heatmap</title>
+    <script src="api.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #eee;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+ 
+        /* --- PANEL DE CONTROL PRINCIPAL --- */
+        #panel-general {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            width: 280px;
+            background: rgba(255, 255, 255, 0.98);
+            color: #333;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            border-top: 6px solid #2ecc71;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .btn-cerrar {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .btn-cerrar:hover { color: #e74c3c; }
+
+        /* --- VENTANA DE AJUSTES --- */
+        #ventana-ajustes {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 320px;
+            background: #222;
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            z-index: 2000;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border: 1px solid #444;
+        }
+
+        h3 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        .controles-grupo { margin-bottom: 15px; text-align: left; }
+        label { display: block; font-size: 11px; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        input {
+            width: 100%;
+            padding: 10px;
+            background: #111;
+            border: 1px solid #444;
+            color: #2ecc71;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .btn-green { background: #2ecc71; color: white; }
+        .btn-blue { background: #3498db; color: white; }
+        .btn-red { background: #e74c3c; color: white; }
+        .btn-grey { background: #555; color: white; }
+        .btn-dark { background: #333; color: #aaa; }
+
+        .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* --- ÁREA DE RENDERIZADO --- */
+        #canvas-wrapper {
+            margin-top: 40px;
+            margin-bottom: 40px;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100vw;
+            height: auto;
+        }
+
+        /* Capas de visualización */
+        .capa-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #capa-clics-visual { z-index: 20; }
+        #capa-poi-visual { z-index: 15; }
+
+        /* Estilo de los puntos */
+        .punto-visual {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            color: #000;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+           
+        }
+
+        .punto-clic-v { background-color: rgba(255, 235, 59, 0.9);  }
+        .punto-poi-v { background-color: rgba(46, 204, 113, 0.9); border-color: #fff; width: 30px;
+            height: 30px; color: #fff; }
+
+        #stats {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            font-family: monospace;
+            line-height: 1.6;
+        }
+
+        #status { font-size: 12px; margin-top: 10px; color: #2ecc71; font-style: italic; }
+        
+        #hint-espacio {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 11px;
+            display: none;
+            z-index: 3000;
+        }
+
+        .divider { height: 1px; background: #eee; margin: 15px 0; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANEL GENERAL -->
+    <div id="panel-general">
+        <button class="btn-cerrar" onclick="togglePanel()">×</button>
+        <h3>GazeMapping - Heatmap</h3>
+        <div style="font-size: 11px; color: #2ecc71; margin-bottom: 10px; font-weight: bold;">
+            Sitio Actual: <span id="st-site">1</span>
+        </div>
+       <div style="font-size: 11px; color: #2ecc71; margin-bottom: 10px; font-weight: bold;">
+            Datos Usuarios #<span id="st-users">1</span>
+        </div>
+        
+        <button class="btn-main btn-green" onclick="fetchData()">🔥 CARGAR HEATMAP</button>
+        
+        <div class="divider"></div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button id="btn-clics" class="btn-main btn-dark" onclick="toggleClics()">🖱️ Clics</button>
+            <button id="btn-pois" class="btn-main btn-dark" onclick="togglePOIs()">📍 POIs</button>
+        </div>
+  <button class="btn-main btn-grey" onclick="limpiarTodoVisual()" style="margin-top:15px">Limpiar Todo</button>
+       
+        <button class="btn-main btn-blue" onclick="toggleAjustes()" style="margin-top:15px">⚙️ Configurar JPG</button>
+        
+        <div id="status">Listo</div>
+        <div id="stats">
+            Gaze Points: <span id="st-gaze">0</span><br>
+            Total Clics: <span id="st-clics">0</span><br>
+            Total POIs: <span id="st-poi">0</span>
+        </div>
+        
+        <p style="font-size: 10px; color: #999; margin-top: 15px; text-align: center;">
+            Presiona [ ESPACIO ] para mostrar panel
+        </p>
+    </div>
+
+    <!-- VENTANA AJUSTES -->
+    <div id="ventana-ajustes">
+        <button class="btn-cerrar" onclick="toggleAjustes()" style="color: #666;">×</button>
+        <h3>Configuración</h3>
+      
+        <div class="controles-grupo">
+            <label>Escala (Aspect Ratio)</label>
+            <input type="number" id="EscalaX" value="1" step="0.1" onchange="renderAll()">
+        </div>
+
+        <div class="controles-grupo">
+            <label>Desplazamiento X</label>
+            <input type="number" id="offX" value="0" step="5" onchange="renderAll()">
+        </div>
+
+        <div class="controles-grupo">
+            <label>Desplazamiento Y</label>
+            <input type="number" id="offY" value="0" step="5" onchange="renderAll()">
+        </div>
+
+        <div class="controles-grupo">
+            <label>Radio de Calor</label>
+            <input type="number" id="radius" value="40" step="5" onchange="renderAll()">
+        </div>
+        
+        <button class="btn-main btn-green" onclick="exportImage()">📸 GUARDAR JPG</button>
+        <button class="btn-main btn-grey" onclick="toggleAjustes()">CERRAR</button>
+    </div>
+
+    <div id="hint-espacio">Panel oculto. Pulsa ESPACIO para volver.</div>
+
+    <!-- CONTENEDOR CANVAS -->
+    <div id="canvas-wrapper">
+        <canvas id="mainCanvas"></canvas>
+        <div id="capa-clics-visual" class="capa-overlay"></div>
+        <div id="capa-poi-visual" class="capa-overlay"></div>
+    </div>
+
+    <script>
+
+        let currentSite = 1;
+        // Estados de visualización
+        let mostrarClics = false;
+        let mostrarPOIs = false;
+        let mostrarHeatmap = false;
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgImg = new Image();
+        let eyeData = [];
+        /*** por defecto ***/ 
+        bgImg.src = './sites/1.png'; 
+        bgImg.onload = () => {
+            canvas.width = bgImg.width;
+            canvas.height = bgImg.height;
+            renderAll();
+        }
+        /*** obtenet datos de usuarios, fichero users.json ***/
+        
+        (async () => {
+            const total = await obtenerTotalUsuarios();
+            console.log(total);
+            const el = document.getElementById('st-users');
+            if (el) el.innerText = total;
+            })();
+        
+
+
+
+
+
+    // CONMUTADOR PARA BOTON DE VER CLICS
+    async function toggleClics() {
+    const btn = document.getElementById('btn-clics');
+    if (mostrarClics) {
+        limpiarCapa('capa-clics-visual');
+        mostrarClics = false;
+        btn.style.background = '#333'; // Color apagado
+    } else {
+        await cargarClicsServidor();
+        mostrarClics = true;
+        btn.style.background = "#4DD17F"; // Color activo (verde)
+      
+    }
+}
+
+    // CONMUTADOR PARA BOTON DE VER POIs
+    async function togglePOIs() {
+        const btn = document.getElementById('btn-pois');
+        if (mostrarPOIs) {
+            limpiarCapa('capa-poi-visual');
+            mostrarPOIs = false;
+            btn.style.background = "#333";
+           
+            } else {
+            await cargarPOIsServidor();
+            mostrarPOIs = true;
+            btn.style.background = "#4DD17F"; // Color activo (Verde)
+        
+            }
+        }
+// se actualiza su estado cuando se borra todo 
+    function actualizarUIBotones() {
+        const btnC = document.getElementById('btn-clics');
+        const btnP = document.getElementById('btn-pois');
+        // Estado Clics
+        if (mostrarClics) {
+        btnC.style.background = "#2ecc71"; // Verde activo
+    } else {
+
+        btnC.style.background = "#333";
+    }
+    // Estado POIs
+    if (mostrarPOIs) {
+        btnP.style.background = "#2ecc71";
+        } else {
+ 
+        btnP.style.background = "#333";
+        }
+    }
+
+
+    /* FUNCIONES DE DIBUJAR PUNTOS **/         
+
+        function renderAll() {
+            if (!bgImg.complete) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bgImg, 0, 0);
+            if (eyeData.length > 0) drawHeatmap();
+        }
+
+        function drawHeatmap() {
+            const dx = parseInt(document.getElementById('offX').value) || 0;
+            const dy = parseInt(document.getElementById('offY').value) || 0;
+            const sx = parseFloat(document.getElementById('EscalaX').value) || 1;
+            const r = parseInt(document.getElementById('radius').value) || 40;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+
+            eyeData.forEach(p => {
+                const x = (p.x * sx) + dx;
+                const y = (p.y * sx) + dy;
+
+                const gradient = tCtx.createRadialGradient(x, y, 0, x, y, r);
+                gradient.addColorStop(0, 'rgba(0,0,0,1)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+                tCtx.fillStyle = gradient;
+                tCtx.beginPath();
+                tCtx.arc(x, y, r, 0, Math.PI * 2);
+                tCtx.fill();
+            });
+
+            const imageData = tCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                const alpha = pixels[i + 3];
+                if (alpha > 0) {
+                    const color = getColor(alpha);
+                    pixels[i] = color.r;
+                    pixels[i+1] = color.g;
+                    pixels[i+2] = color.b;
+                    pixels[i+3] = alpha * 0.8; 
+                }
+            }
+
+            const colorCanvas = document.createElement('canvas');
+            colorCanvas.width = canvas.width;
+            colorCanvas.height = canvas.height;
+            colorCanvas.getContext('2d').putImageData(imageData, 0, 0);
+            ctx.drawImage(colorCanvas, 0, 0);
+        }
+
+        function getColor(intensity) {
+            const colors = [
+                { stop: 0, r: 0, g: 0, b: 255 },
+                { stop: 64, r: 0, g: 255, b: 255 },
+                { stop: 128, r: 0, g: 255, b: 0 },
+                { stop: 192, r: 255, g: 255, b: 0 },
+                { stop: 255, r: 255, g: 0, b: 0 }
+            ];
+            for (let i = 0; i < colors.length - 1; i++) {
+                if (intensity >= colors[i].stop && intensity <= colors[i+1].stop) {
+                    const range = colors[i+1].stop - colors[i].stop;
+                    const factor = (intensity - colors[i].stop) / range;
+                    return {
+                        r: Math.floor(colors[i].r + (colors[i+1].r - colors[i].r) * factor),
+                        g: Math.floor(colors[i].g + (colors[i+1].g - colors[i].g) * factor),
+                        b: Math.floor(colors[i].b + (colors[i+1].b - colors[i].b) * factor)
+                    };
+                }
+            }
+            return colors[colors.length - 1];
+        }
+
+        // CARGAR CLICS
+        async function cargarClicsServidor() {
+            try {
+                mostrarStatus("Cargando clics...");
+                const response = await fetch(`http://localhost:3000/obtener-clics?site=${currentSite}`);
+                const clics = await response.json();
+                
+                // limpiarCapa('capa-clics-visual');
+                const capa = document.getElementById('capa-clics-visual');
+                
+                clics.forEach(clic => {
+                    const div = document.createElement('div');
+                    div.className = 'punto-visual punto-clic-v';
+                    div.style.left = clic.x + 'px';
+                    div.style.top = clic.y + 'px';
+                    div.innerText = clic.id;
+                    capa.appendChild(div);
+                });
+
+                document.getElementById('st-clics').innerText = clics.length;
+                mostrarStatus("Clics cargados");
+                mostrarClics = true; // <--- Activamos estado
+            } catch (err) {
+                mostrarStatus("Error clics");
+                mostrarClics = true;
+            }
+        }
+
+        // CARGAR POIS
+        async function cargarPOIsServidor() {
+            try {
+                mostrarStatus("Cargando POIs...");
+                const response = await fetch(`http://localhost:3000/obtener-poi?site=${currentSite}`);
+                const data = await response.json();
+                
+                // Si el servidor devuelve el objeto completo {puntos: []}
+                const pois = data.puntos || data;
+
+                limpiarCapa('capa-poi-visual');
+                const capa = document.getElementById('capa-poi-visual');
+                
+                pois.forEach(poi => {
+                    const div = document.createElement('div');
+                    div.className = 'punto-visual punto-poi-v';
+                    div.style.left = poi.x + 'px';
+                    div.style.top = poi.y + 'px';
+                    div.innerText = poi.id || "";
+                    capa.appendChild(div);
+                });
+
+                document.getElementById('st-poi').innerText = pois.length;
+                mostrarStatus("POIs cargados");
+            } catch (err) {
+                mostrarStatus("Error POIs");
+                console.error(err);
+            }
+        }
+
+        function limpiarCapa(id) {
+            const capa = document.getElementById(id);
+            if (capa) capa.innerHTML = '';
+            if (id === 'capa-clics-visual') document.getElementById('st-clics').innerText = "0";
+            if (id === 'capa-poi-visual') document.getElementById('st-poi').innerText = "0";
+           
+        }
+
+function renderizarPuntosClics(puntos) {
+    const capa = document.getElementById('capa-clics-visual');
+    capa.innerHTML = ''; // Limpiar anteriores
+
+    puntos.forEach((p, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'punto-clic-v'; // Asegúrate de tener este CSS
+        dot.style.left = `${p.x}px`;
+        dot.style.top = `${p.y}px`;
+        dot.style.position = 'absolute';
+        // Opcional: mostrar número de clic
+        // dot.innerText = index + 1; 
+        capa.appendChild(dot);
+    });
+}
+
+
+        async function fetchData() {
+            mostrarStatus("Sincronizando Heatmap...");
+            try {
+                const response = await fetch(`http://localhost:3000/obtener-datos?site=${currentSite}`);
+                eyeData = await response.json();
+                document.getElementById('st-gaze').innerText = eyeData.length;
+                renderAll();
+                mostrarStatus("Heatmap listo");
+            } catch (e) {
+                mostrarStatus("Error servidor");
+            }
+        }
+
+        function mostrarStatus(msg) {
+            document.getElementById('status').innerText = msg;
+        }
+
+        function togglePanel() {
+            const p = document.getElementById('panel-general');
+            const h = document.getElementById('hint-espacio');
+            const isHidden = p.style.display === 'none';
+            p.style.display = isHidden ? 'block' : 'none';
+            h.style.display = isHidden ? 'none' : 'block';
+        }
+
+        function toggleAjustes() {
+            const v = document.getElementById('ventana-ajustes');
+            v.style.display = (v.style.display === 'block') ? 'none' : 'block';
+        }
+
+
+
+/********* GUARDAR IMAGEN 
+ * convierte las capas de Clics y POIs si están activadas 
+ * a puntos del canvas para exportar como jpg (necesario)
+ * *************/ 
+
+
+async function exportImage() {
+    mostrarStatus("Generando captura completa...");
+
+    // 1. Redibujar el fondo y el heatmap para asegurar que el canvas esté limpio
+    renderAll();
+
+    // 2. Estampar Clics si están activos
+    if (mostrarClics) {
+        dibujarPuntosEnCanvas('capa-clics-visual', 'rgba(255, 235, 59, 0.9)', '#000');
+    }
+
+    // 3. Estampar POIs si están activos
+    if (mostrarPOIs) {
+        dibujarPuntosEnCanvas('capa-poi-visual', 'rgba(46, 204, 113, 0.9)', '#fff');
+    }
+
+    // 4. Crear el enlace de descarga
+    const link = document.createElement('a');
+    link.download = `analisis_sitio${currentSite}_${Date.now()}.jpg`;
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.click();
+
+    // 5. Limpiar el canvas (quitar los puntos dibujados) para que el heatmap siga siendo dinámico
+    renderAll();
+    mostrarStatus("Imagen guardada con éxito");
+}
+
+// funcion auxiliar para pasar puntos a Canvas 
+function dibujarPuntosEnCanvas(idCapa, colorFondo, colorTexto) {
+    const capa = document.getElementById(idCapa);
+    const puntos = capa.getElementsByClassName('punto-visual');
+
+    Array.from(puntos).forEach(punto => {
+        // Obtener coordenadas desde el estilo (quitando 'px')
+        const x = parseFloat(punto.style.left);
+        const y = parseFloat(punto.style.top);
+        const texto = punto.innerText;
+
+        // Dibujar el círculo (Sombra/Borde)
+        ctx.beginPath();
+        ctx.arc(x, y, 15, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fill();
+
+        // Dibujar el círculo principal
+        ctx.beginPath();
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.fillStyle = colorFondo;
+        ctx.fill();
+        ctx.strokeStyle = colorTexto === '#fff' ? '#fff' : '#000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Dibujar el ID o número del punto
+        ctx.fillStyle = colorTexto;
+        ctx.font = "bold 11px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(texto, x, y);
+    });
+}
+
+
+
+
+/*********** REDIBUJAR CANVAS CUANDO CAMBIAMOS DE IMAGEN  *******/
+function actualizarImagenCanvas(nuevoSitio) {
+    const nuevaRuta = `./sites/${nuevoSitio}.png`;
+    
+    // 1. Cambiamos la fuente de la imagen
+    bgImg.src = nuevaRuta;
+
+    // 2. IMPORTANTE: Esperar a que cargue para dibujar
+    bgImg.onload = () => {
+        // Ajustamos el canvas al tamaño de la nueva imagen
+        canvas.width = bgImg.width;
+        canvas.height = bgImg.height;
+        
+        // Redibujamos todo (Fondo + POIs + Clics)
+        renderAll();
+        
+        console.log(`Canvas actualizado: Sitio ${nuevoSitio}`);
+    };
+
+    bgImg.onerror = () => {
+        console.error("No se pudo cargar la imagen en: " + nuevaRuta);
+    };
+}
+
+/***** Limpiar antes de  *****/ 
+
+function limpiarTodoVisual() {
+
+    // 1. VACIAR LOS DATOS LÓGICOS
+    eyeData = [];
+    
+    // 2. RESETEAR ESTADOS DE TOGGLE (Importante para la coherencia)
+    mostrarClics = false;
+    mostrarPOIs = false;
+
+    // 3. LIMPIAR CAPAS HTML
+    limpiarCapa('capa-clics-visual'); 
+    limpiarCapa('capa-poi-visual');
+
+    // 4. ACTUALIZAR ESTADO VISUAL DE LOS BOTONES
+    // Esto pondrá los botones en gris/OFF automáticamente
+    actualizarUIBotones();
+
+    // 5. LIMPIAR CANVAS Y REDIBUJAR FONDO
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (bgImg.complete) {
+        ctx.drawImage(bgImg, 0, 0);
+    }
+    
+
+}
+
+
+        /*********** NAVEGACION ****/
+
+async function cambiarSitio(direccion) {
+    let siguienteSitio = currentSite;
+
+    if (direccion === 'next') {
+        siguienteSitio++;
+    } else if (direccion === 'previous' && currentSite > 1) {
+        siguienteSitio--;
+    }
+
+    // Comprobamos si el archivo existe antes de intentar cambiar
+    const existe = await existeFichero(siguienteSitio);
+    
+    if (existe) {
+        currentSite = siguienteSitio;
+        document.getElementById('st-site').innerText = currentSite;
+        // 1. Limpiamos solo el contenido visual, pero NO el estado (mostrarPOIs sigue true)
+        //   limpiarTodoVisual();
+        limpiarCapa('capa-clics-visual');
+        limpiarCapa('capa-poi-visual');
+        
+        
+        // 2. Actualizar imagen en Canvas
+       actualizarImagenCanvas(currentSite);
+      
+       // 3. RE-CARGA AUTOMÁTICA: Si el estado era true, cargamos los datos del nuevo sitio
+        if (mostrarClics) {
+            await cargarClicsServidor(); 
+        }
+        if (mostrarPOIs) {
+            await cargarPOIsServidor();
+        }
+    }
+}
+
+
+
+/***
+async function cargarDatosSesion() {
+    try {
+        mostrarMensaje(`Cargando datos del sitio ${currentSite}...`);
+        
+        // 1. Llamada al servidor (asegúrate de que tu API acepte el parámetro site)
+        const response = await fetch(`http://localhost:3000/obtener-clics?site=${currentSite}`);
+        
+        if (!response.ok) {
+            // Si no hay datos, limpiamos la visualización anterior
+            limpiarTodoVisual();
+            mostrarMensaje("Sin datos para este sitio");
+            return;
+        }
+
+        const datos = await response.json(); 
+        clicsData = datos.puntos || datos; // Adaptar según estructura de tu JSON
+
+        // 2. Renderizar puntos individuales (Capa de Clics)
+        renderizarPuntosClics(clicsData);
+
+        // 3. Actualizar Heatmap
+        const puntosHeatmap = clicsData.map(p => ({
+            x: p.x,
+            y: p.y,
+            value: 1 // Intensidad de cada punto
+        }));
+
+        heatmapInstance.setData({
+            max: 5, // Ajusta según la densidad esperada
+            data: puntosHeatmap
+        });
+
+        mostrarMensaje(`✅ ${clicsData.length} clics cargados`);
+
+    } catch (error) {
+        console.error("Error cargando clics:", error);
+        mostrarMensaje("Error al cargar datos");
+    }
+}
+***/
+
+         // Eventos de teclado
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                const v = document.getElementById('ventana-ajustes');
+                if (v.style.display === 'block') toggleAjustes();
+                else togglePanel();
+            }
+
+          if (e.key === 'ArrowRight') {
+                cambiarSitio('next');
+            }
+            if (e.key === 'ArrowLeft' ) {
+                cambiarSitio('previous');
+            }  
+
+
+
+
+
+        });
+    </script>
+</body>
+</html>

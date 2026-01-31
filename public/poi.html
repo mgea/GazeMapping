@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="gazemapping.ico">
+    <link rel="shortcut icon" href="gazeMapping.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Miguel Gea">
+    <meta name="version" content="1.0.0">
+    <meta name="description" content="Herramienta de análisis visual GazeMapping para Diseño de Interfaces de Usuario">
+    <meta name="keywords" content="UX, Eye tracking, Heatmap, UI Design, GazeMapping, Análisis de Usuario">
+    
+    <meta name="subject" content="Diseño de Interfaces de Usuario">
+
+    <title>GazeMapping - POI </title>
+    
+    <script src="api.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background-color: #111;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* --- CONTENEDOR PRINCIPAL --- */
+        #canvas-container {
+            position: relative;
+            width: fit-content;
+            margin: 0 auto;
+            cursor: crosshair;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        #background-img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            min-height: 300px;
+            background: #222;
+        }
+
+        #capa-poi {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* --- ESTILO DE LOS PUNTOS POI --- */
+        .punto-poi {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: #2ecc71; /* Verde */
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            color: #000;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+            transition: transform 0.2s;
+        }
+
+        /* --- INTERFAZ DE USUARIO --- */
+        #ui-flotante {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            width: 250px;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .oculto {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-20px);
+        }
+
+        h2 { margin: 0 0 10px 0; font-size: 18px; color: #2ecc71; }
+        p { font-size: 12px; color: #ccc; margin-bottom: 15px; }
+
+        .btn-group { display: flex; flex-direction: column; gap: 8px; }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: 0.2s;
+        }
+
+        .btn-save { background: #2ecc71; color: #000; }
+        .btn-undo { background: #444; color: #fff; }
+        .btn-clear { background: #e74c3c; color: #fff; }
+        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+
+        #stats {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        #status-msg {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+        }
+
+        #hint-espacio {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 11px;
+            display: none;
+            z-index: 999;
+        }
+
+        kbd {
+            background: #333;
+            padding: 2px 4px;
+            border-radius: 4px;
+            color: #2ecc71;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-flotante">
+        <h2>Editor de POIs</h2>
+        <div style="font-size: 11px; color: #2ecc71; margin-bottom: 10px; font-weight: bold;">
+            Sitio Actual: <span id="st-site">1</span>
+        </div>
+        <p>Marca los Puntos de Interés estratégicos.<br><br>
+           Usa <kbd>→</kbd> para cambiar sitio.
+        </p>
+        
+        <div class="btn-group">
+            <button class="btn btn-save" onclick="guardarPOIs()">💾 GUARDAR POI-datos.json</button>
+            <button class="btn btn-undo" onclick="deshacerUltimo()">↩️ DESHACER ÚLTIMO</button>
+            <button class="btn btn-clear" onclick="limpiarTodo()">🗑️ BORRAR TODO</button>
+        </div>
+
+        <div id="stats">
+            Total POIs: <span id="count">0</span><br>
+            Último X: <span id="last-x">-</span><br>
+            Último Y: <span id="last-y">-</span>
+        </div>
+        <div id="status-msg">Listo</div>
+        <p style="font-size: 10px; color: #666; margin-top: 10px; text-align: center; margin-bottom: 0;">
+            [ ESPACIO ] para ocultar
+        </p>
+    </div>
+
+    <div id="hint-espacio">Menú oculto. Pulsa ESPACIO para mostrar.</div>
+
+    <div id="canvas-container">
+        <!---- por defecto 1.png en SITES -->
+        <img src="/sites/1.png" id="background-img" alt="Fondo" onclick="registrarPOI(event)">
+        <div id="capa-poi"></div>
+    </div>
+
+    <script>
+        let pois = [];
+        let currentSite = 1;
+        // INICIO: Cargar datos al abrir la página
+        window.onload = () => {
+            document.getElementById('st-site').innerText = currentSite;
+            cargarPOIsDeSitioActual();
+        };
+
+        
+        // --- NAVEGACIÓN ---
+       async function cambiarSitio(direccion) {
+             if (direccion === 'next') {
+               const existe = await existeFichero(currentSite + 1);
+               if(existe)  currentSite++;
+                  else return;
+            }
+            else {
+               if ((direccion === 'previous')&&(currentSite>1)) currentSite--;
+               else return;
+            }
+            
+            const nuevaRuta = `/sites/${currentSite}.png`;
+            console.log("cambiando a ", nuevaRuta);
+            const img = document.getElementById('background-img');
+            // Intentar cargar la siguiente imagen
+            img.src = nuevaRuta;
+            document.getElementById('st-site').innerText = currentSite;
+
+            mostrarMensaje(`Cambiado a Sitio ${currentSite}`);
+            
+            // 1. Limpiamos la lista local y la capa visual
+            limpiarTodo(false); 
+
+            // 2. Intentamos cargar los POIs guardados para este sitio específico
+            cargarPOIsDeSitioActual();
+        }
+
+        function registrarPOI(e) {
+            const rect = e.target.getBoundingClientRect();
+            const x = Math.floor(e.clientX - rect.left);
+            const y = Math.floor(e.clientY - rect.top);
+
+            const nuevoPOI = {
+                id: pois.length + 1,
+                nombre: `POI_${pois.length + 1}`,
+                x: x,
+                y: y,
+                site: currentSite,
+                timestamp: Date.now()
+            };
+
+            pois.push(nuevoPOI);
+            renderizarPunto(nuevoPOI);
+            actualizarUI(x, y);
+        }
+
+        function renderizarPunto(poi) {
+            const capa = document.getElementById('capa-poi');
+            const div = document.createElement('div');
+            div.className = 'punto-poi';
+            div.id = `poi-marker-${poi.id}`;
+            div.style.left = `${poi.x}px`;
+            div.style.top = `${poi.y}px`;
+            div.innerText = poi.id;
+            capa.appendChild(div);
+        }
+
+        function actualizarUI(x = "-", y = "-") {
+            document.getElementById('count').innerText = pois.length;
+            document.getElementById('last-x').innerText = x;
+            document.getElementById('last-y').innerText = y;
+        }
+
+        function deshacerUltimo() {
+            if (pois.length === 0) return;
+            pois.pop();
+            const capa = document.getElementById('capa-poi');
+            if (capa.lastChild) capa.removeChild(capa.lastChild);
+            actualizarUI();
+            mostrarMensaje("Último punto eliminado");
+        }
+
+        function limpiarTodo(confirmar = true) {
+           // if (confirmar && !confirm("¿Estás seguro de borrar todos los puntos?")) return;
+            
+            pois = [];
+            document.getElementById('capa-poi').innerHTML = '';
+            actualizarUI();
+            if (confirmar) mostrarMensaje("Lista vaciada");
+        }
+
+      
+
+  
+
+/*** AÑADE POI a la visualización recuperando del servidor 
+ * * que están en  /sites/data/poiXX.json  ***/ 
+async function cargarPOIsDeSitioActual() {
+    try {
+        mostrarMensaje("Buscando POIs guardados...");
+        
+        // Enviamos el sitio actual como parámetro (Query String)
+        const response = await fetch(`http://localhost:3000/obtener-poi?site=${currentSite}`);
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                mostrarMensaje("Sin POIs previos");
+            }
+            return;
+        }
+
+        const data = await response.json();
+        
+        // Asumiendo que el servidor devuelve { puntos: [...] }
+        const puntosGuardados = data.puntos || data;
+
+        if (puntosGuardados && puntosGuardados.length > 0) {
+            // Actualizamos nuestro array local para poder seguir editando
+            pois = puntosGuardados; 
+            
+            // Dibujamos cada punto en la pantalla
+            pois.forEach(poi => renderizarPunto(poi));
+            
+            actualizarUI();
+            mostrarMensaje(`✅ ${pois.length} puntos cargados`);
+        }
+    } catch (err) {
+        console.error("Error al cargar:", err);
+        mostrarMensaje("Error al conectar con servidor");
+    }
+}
+
+
+
+
+
+        async function guardarPOIs() {
+
+            if (pois.length === 0) {
+                alert("No hay puntos para guardar.");
+                return;
+            }
+
+            const suffix = `-${currentSite}`;
+            mostrarMensaje("Exportando...");
+
+            try {
+             const datosPOI = {
+                    puntos: pois,          // El array con los datos
+                    suffix: `-${currentSite}`    // El sufijo que generará "clics-1.json"
+                    };
+
+            const resPOI = await fetch('http://localhost:3000/guardar-POI', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosPOI)
+                });
+
+            if (resPOI.ok) {
+             mostrarMensaje(`✅ Exportado: POI-${suffix}.json`);
+            } else {
+                mostrarMensaje(`❌ Error en el servidor: ${resPOI.status}`);
+            }
+      
+           } catch (error) {
+                mostrarMensaje("Error de al guardar");
+            }
+        }
+
+        function mostrarMensaje(msg) {
+            const el = document.getElementById('status-msg');
+            el.innerText = msg;
+            setTimeout(() => { if(el.innerText === msg) el.innerText = "Listo"; }, 3000);
+        }
+
+        function toggleMenu() {
+            const ui = document.getElementById('ui-flotante');
+            const hint = document.getElementById('hint-espacio');
+            if (ui.classList.contains('oculto')) {
+                ui.classList.remove('oculto');
+                hint.style.display = 'none';
+            } else {
+                ui.classList.add('oculto');
+                hint.style.display = 'block';
+            }
+        }
+
+        // Eventos de teclado
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleMenu();
+            }
+
+            if (e.key === 'ArrowRight') {
+                cambiarSitio('next');
+            }
+            if (e.key === 'ArrowLeft' ) {
+                cambiarSitio('previous');
+            }  
+
+            
+            if (e.ctrlKey && e.key === 'z') deshacerUltimo();
+            
+            if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                guardarPOIs();
+            }
+        });
+    </script>
+</body>
+</html>
