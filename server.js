@@ -1,62 +1,80 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const cors = require('cors');
+/*
+ * server.js - GazeMapping Backend
+ * Optimizado para Render.com
+ *   Web Eye Tracking Analysis & Heatmap Visualization tool 
+ * version 1.0, Junio 2026 
+ * autor: Miguel Gea
+ *  
+ * repo:        https://github.com/mgea/GazeMapping
+ * live demo:   https://gazemapping.onrender.com/ 
+ * 
+ * Almacena datos en: 
+ *  Imágenes:  http://localhost:3000/site/1.png 
+ *  Usuarios:  http://localhost:3000/site/users.json
+ *  Datos gaze:  http://localhost:3000/site/data/gaze-1.json 
+ *  Clics usr:   http://localhost:3000/site/data/clics-1.json
+ *  POI imagen:  http://localhost:3000/site/data/POI-1.json
+ */
+
+import express from 'express';
+import { existsSync, mkdirSync, writeFile, readFile } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import cors from 'cors';
+
+// Configuración necesaria para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3000;
-// CONFIGURACIÓN GLOBAL DE RUTAS
-// __dirname es el directorio donde vive server.js
-const PUBLIC_PATH = path.join(__dirname, 'public');
+const PORT = process.env.PORT || 3000;
+const PUBLIC_PATH = join(__dirname, 'public');
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
 
-/**
- * CONFIGURACIÓN DE CARPETAS ESTÁTICAS
- * Si tus imágenes están en public/SITE/1.png
- * Esta línea permite que http://localhost:3000/SITE/1.png funcione directamente.
+/* 
+ * Servir archivos estáticos
+ * Si tus imágenes están en public/site/1.png
+ * Esta línea permite que http://localhost:3000/site/1.png funcione directamente.
  */
-app.use(express.static(path.join(__dirname, 'public')));
-
-// También servimos la raíz por si los HTML están fuera de public
-app.use(express.static(__dirname));
+app.use(express.static(PUBLIC_PATH));
 
 
 
-
-
-
-
-
-/*** ? ****/
+/*  
+ *  se usa?
+ */
 app.get('/comprobar-sitio/:id', (req, res) => {
     const siteId = req.params.id;
     const nombreArchivo = `${siteId}.png`;
     // Construimos la ruta hacia la carpeta de imágenes de los sitios
-    const rutaImagen = path.join(PUBLIC_PATH, 'sites', nombreArchivo);
+    const rutaImagen = join(PUBLIC_PATH, 'sites', nombreArchivo);
 
     try {
-        const stats = fs.stat(rutaImagen);
+        const stats = stat(rutaImagen);
         return stats.isFile(); // true solo si es fichero
-  } catch {
+    } catch {
         return false;
-  }
-
-    
+    }    
 });
 
 
 
-/**
- * Función auxiliar para guardar archivos de forma segura
+/*
+ * Función auxiliar para guardar archivos de datos de forma segura
+ * Se almacena en /public/site/data/n.json
+ * gaze-n   --- heatmap
+ * clics-n  --  clics de mouse en testing 
+ * poi-n    --- POI creados para cada sitio (puntos de interés) 
+ * Estructura esperada: { puntos: Array, suffix: String }
  */
 
 const guardarArchivoJSON = (fileName, datos, res) => {
-    const rutaAbsoluta = path.join(PUBLIC_PATH, 'sites', 'data', fileName);
-    const directorio = path.dirname(rutaAbsoluta);
-    console.log("> ",directorio)
+    const rutaAbsoluta = join(PUBLIC_PATH, 'sites', 'data', fileName);
+    const directorio = dirname(rutaAbsoluta);
+   
     // Validar que los datos existan
     if (!datos) {
         return res.status(400).json({ error: "No se recibieron datos para guardar" });
@@ -64,13 +82,13 @@ const guardarArchivoJSON = (fileName, datos, res) => {
 
     try {
         // Asegurar que el directorio existe
-        if (!fs.existsSync(directorio)) {
-            fs.mkdirSync(directorio, { recursive: true });
+        if (!existsSync(directorio)) {
+            mkdirSync(directorio, { recursive: true });
         }
 
         const contenido = JSON.stringify(datos, null, 2);
 
-        fs.writeFile(rutaAbsoluta, contenido, (err) => {
+        writeFile(rutaAbsoluta, contenido, (err) => {
             if (err) {
                 console.error("❌ ERROR FS:", err.message);
                 return res.status(500).json({ 
@@ -91,7 +109,6 @@ const guardarArchivoJSON = (fileName, datos, res) => {
 
 app.post('/guardar-POI', (req, res) => {
     const fileName = `poi${req.body.suffix || ''}.json`;
-    console.log("--- fichero", fileName)
     guardarArchivoJSON(fileName, req.body.puntos, res);
 });
 
@@ -108,57 +125,16 @@ app.post('/guardar-clics', (req, res) => {
 
 
 
-
-
-
-// Guardar Gaze con nombre dinámico
-
-/**
- * Guardar Gaze
- * Estructura esperada: { puntos: Array, suffix: String }
- 
-app.post('/guardar-gaze', (req, res) => {
-    try {
-        const { puntos, suffix } = req.body;
-        
-        // Validación básica para evitar error 500
-        if (!puntos) {
-            return res.status(400).json({ error: "Faltan los datos (puntos)" });
-        }
-        const fileName = `gaze${suffix || ''}.json`;
-        guardarArchivoJSON(fileName, puntos, res);
-    } catch (e) {
-        res.status(500).json({ error: "Error al procesar la petición" });
-    }
-});
-
-
-
-// Guardar Clics con nombre dinámico
-
-app.post('/guardar-clics', (req, res) => {
-    try {
-        const { puntos, suffix } = req.body;
-        
-        if (!puntos) {
-            return res.status(400).json({ error: "Faltan los datos (puntos)" });
-        }
-
-        const fileName = `clics${suffix || ''}.json`;
-        guardarArchivoJSON(fileName, puntos, res);
-    } catch (e) {
-        res.status(500).json({ error: "Error al procesar la petición" });
-    }
-});
-
-***/
-// Obtener datos (ahora acepta query params para el sufijo)
+/*
+ *  Obtener datos de heatmap 
+ * (ahora acepta query params para el sufijo)
+ */
 app.get('/obtener-datos', (req, res) => {
     const suffix = req.query.site || '';
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', `gaze-${suffix}.json`);
+    const filePath = join(__dirname, 'public', 'sites', 'data', `gaze-${suffix}.json`);
     
-     if (fs.existsSync(filePath)) {
-        const contenido = fs.readFileSync(filePath, 'utf8');
+     if (existsSync(filePath)) {
+        const contenido = readFileSync(filePath, 'utf8');
         console.log("encontrado", filePath);
         res.json(JSON.parse(contenido));
     } else {
@@ -167,14 +143,16 @@ app.get('/obtener-datos', (req, res) => {
     }
 });
 
-
-// Obtener datos (ahora acepta query params para el sufijo)
+/*
+ *  Obtener datos clics 
+ * (ahora acepta query params para el sufijo)
+ */
 app.get('/obtener-clics', (req, res) => {
     const suffix = req.query.site || '';
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', `clics-${suffix}.json`);
+    const filePath = join(__dirname, 'public', 'sites', 'data', `clics-${suffix}.json`);
     
-    if (fs.existsSync(filePath)) {
-        const contenido = fs.readFileSync(filePath, 'utf8');
+    if (existsSync(filePath)) {
+        const contenido = readFileSync(filePath, 'utf8');
         console.log("encontrado", filePath);
         res.json(JSON.parse(contenido));
     } else {
@@ -183,13 +161,17 @@ app.get('/obtener-clics', (req, res) => {
     }
 });
 
+/*
+ *  Obtener datos clics 
+ * (ahora acepta query params para el sufijo)
+ */
 app.get('/obtener-clics', (req, res) => {
     const site = req.query.site;
     // Busca archivos como clics-1.json, clics-2.json
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', `clics-${site}.json`);
+    const filePath = join(__dirname, 'public', 'sites', 'data', `clics-${site}.json`);
 
-    if (fs.existsSync(filePath)) {
-        const contenido = fs.readFileSync(filePath, 'utf8');
+    if (existsSync(filePath)) {
+        const contenido = readFileSync(filePath, 'utf8');
         res.json(JSON.parse(contenido));
     } else {
         res.status(404).send("No hay datos");
@@ -197,13 +179,16 @@ app.get('/obtener-clics', (req, res) => {
 });
 
 
-// Obtener datos (ahora acepta query params para el sufijo)
+/*
+ *  Obtener datos POI 
+ * (ahora acepta query params para el sufijo)
+ */
 app.get('/obtener-poi', (req, res) => {
     const suffix = req.query.site || '';
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', `poi-${suffix}.json`);
+    const filePath = join(__dirname, 'public', 'sites', 'data', `poi-${suffix}.json`);
     
-    if (fs.existsSync(filePath)) {
-        const contenido = fs.readFileSync(filePath, 'utf8');
+    if (existsSync(filePath)) {
+        const contenido = readFileSync(filePath, 'utf8');
         console.log("encontrado");
         res.json(JSON.parse(contenido));
     } else {
@@ -214,15 +199,17 @@ app.get('/obtener-poi', (req, res) => {
 });
 
 
-
-//  USUARIOS ALMACENAR 
-
+/*
+ *  Guardar datos usuarios de sesión 
+ * Se almacena en /public/site/users.json
+ * (se crea si no existe y se van añadiendo)
+ */
 app.post('/guardar-usuario', (req, res) => {
     const nuevoUsuario = req.body;
-    const filePath = path.join(__dirname, 'public', 'sites',  `users.json`);
+    const filePath = join(__dirname, 'public', 'sites',  `users.json`);
 
     // Leer el archivo actual (o crear uno vacío si no existe)
-    fs.readFile(filePath, 'utf8', (err, data) => {
+    readFile(filePath, 'utf8', (err, data) => {
         let listaUsuarios = [];
         if (!err && data) {
             listaUsuarios = JSON.parse(data);
@@ -231,18 +218,21 @@ app.post('/guardar-usuario', (req, res) => {
         listaUsuarios.push(nuevoUsuario);
 
         // Guardar la lista actualizada
-        fs.writeFile(filePath, JSON.stringify(listaUsuarios, null, 2), (err) => {
+        writeFile(filePath, JSON.stringify(listaUsuarios, null, 2), (err) => {
             if (err) return res.status(500).send("Error escribiendo archivo");
             res.send("Usuario guardado");
         });
     });
 });
 
-
+/*
+ * Conocer numero de usuarios que han usado sesión testing 
+ * Normalmente el heatmap acumula datos de más de una visita
+ */
 app.get('/total-usuarios', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
+    const filePath = join(__dirname, 'public', 'sites', 'users.json');
 
-    fs.readFile(filePath, 'utf8', (err, data) => {
+    readFile(filePath, 'utf8', (err, data) => {
         if (err || !data) {
             return res.json({ total: 0 }); // Si no existe el archivo, devolver 0
         }
@@ -255,7 +245,12 @@ app.get('/total-usuarios', (req, res) => {
     });
 });
 
+// Ruta para servir el index o about si entran a la raíz
+app.get('/', (req, res) => {
+    res.sendFile(join(PUBLIC_PATH, 'index.html'));
+});
+
+
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📁 Carpeta estática: ${path.join(__dirname, 'public')}`);
+    console.log(`🚀 GazeMapping Online: Port ${PORT}`);
 });

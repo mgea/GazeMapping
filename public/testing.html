@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
+<!--------------------------
+  - GazeMapping : testing.html
+  ------------------------->
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="gazemapping.ico">
@@ -248,7 +251,7 @@
 
     <div id="canvas-background">
         <!---- por defecto 1.png en SITES -->
-        <img src="./sites/1.png" id="background-img" alt="Imagen"> 
+        <img src="sites/1.png" id="background-img" alt="Imagen"> 
         <div id="capa-clics"></div>
     </div>
 
@@ -274,7 +277,7 @@
    
         <hr>
         <button class="menu-btn" onclick="cerrarMenuYReanudar()" style="background:#111111; color:#ffffff;">Reanudar [Espacio]</button>
-      
+    </div>
 
     <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:11999;"></div>
 
@@ -318,7 +321,8 @@
     </div>
 
 
-    </div>
+    
+
 
     <script>
         let acumuladorPuntos = [];
@@ -352,7 +356,7 @@
                else return;
             }
            
-            const nuevaRuta = `/sites/${currentSite}.png`;
+            const nuevaRuta = `sites/${currentSite}.png`;
              console.log("cambiando a ", nuevaRuta);
             const img = document.getElementById('background-img');
             
@@ -478,6 +482,12 @@
 
         });
 
+        /* 
+         * Funciones de OPEN/CLOSE menu de control (con tecla Espacio)
+         * Pausa captura de datos, hacer resume al cerrar ventana 
+         * 
+         */
+
         function abrirMenuYArrestar() {
             document.getElementById('controlMenu').style.display = 'block';
             trackerPausado = true;
@@ -500,6 +510,7 @@
             }
         }
 
+        // Ver/Ocultar cámara de tracking facial 
         function toggleCamara() {
             camaraManualVisible = !camaraManualVisible;
             const ids = ['webgazerVideoContainer', 'webgazerVideoCanvas', 'webgazerFaceOverlay', 'webgazerDot'];
@@ -509,6 +520,7 @@
             });
         }
 
+        // Ver/Ocultar ventana de estado (superior derecha) 
         function togglePanelEstado() {
             const panel = document.getElementById('estado-ui');
             if (panel.style.display === 'none') {
@@ -519,6 +531,11 @@
             }
         }
 
+        /* 
+         * Calibración y uso de webgazer.js  
+         * 
+         * 
+         */
         async function iniciarWebGazer() {
             await webgazer.setGazeListener((data, elapsedTime) => {
                 if (data == null || trackerPausado) return;
@@ -568,10 +585,14 @@
             }
         }
 
-// --- EXPORTACIÓN CON SUFIJO DINÁMICO ---
+        /* 
+         * EXPORTAR JSON 
+         * Guardar datos en servidor de gaze-n.json y clics-n.json de una sesión 
+         * 
+         */
         async function exportarJSON() {
             const suffix = `-${currentSite}`;
-            
+            setMensajeEstado("Guardando en servidor...");
 
             /*
             // Exportar Gaze
@@ -591,159 +612,132 @@
             }, 500);
             */
             try {
-             const datosGAZE = {
-                    puntos: acumuladorPuntos,          // El array con los datos
-                    suffix: `-${currentSite}`    // El sufijo que generará "clics-1.json"
-                    };
+                /* 
+                 * Array de datos, 
+                 * sufijo para identificar fichero, ej. "clics-1.json", "gaze-1.json"
+                 */ 
+                const datosGAZE = { puntos: acumuladorPuntos, suffix: suffix };
+                const datosCLICS = { puntos: datosClics, suffix: suffix };
 
-            const resGaze = await fetch('http://localhost:3000/guardar-gaze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datosGAZE)
-                });
-                 // Ejemplo de cómo enviar el suffix desde el cliente (index.html o control_maestro.html)
-            
-            const datosCLICS = {
-                    puntos: datosClics,          // El array con los datos
-                    suffix: `-${currentSite}`    // El sufijo que generará "clics-1.json"
-                    };
+                /* 
+                 * USAR RUTAS RELATIVAS FETCHING 
+                 * realizar dos llamadas a fetch  
+                 * antes por separado 
+                 * const resGaze = await fetch('http://localhost:3000/guardar-gaze', {
+                 *       method: 'POST',
+                 *       headers: { 'Content-Type': 'application/json' },
+                 *       body: JSON.stringify(datosGAZE)
+                 *       });
+                 */
 
-            const resClics = await fetch('http://localhost:3000/guardar-clics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(datosCLICS) // Enviamos el objeto completo
-                });
-
-            if (resGaze.ok && resClics.ok) {
-                    setMensajeEstado("DATOS GUARDADOS ✔");
-                } else {
-                    setMensajeEstado("Error en el servidor");
-                }
-              } catch (error) {
-                setMensajeEstado("Error de conexión");
-            }
-        
-
-            setMensajeEstado(`Exportado: clicks${suffix}.json`);
-        }
-
-
-
-/*
-        async function exportarJSON() {
-            if (acumuladorPuntos.length === 0 && datosClics.length === 0) {
-                setMensajeEstado("Sin datos para exportar");
-                return;
-            }
-            
-            setMensajeEstado("Exportando datos...");
-            
-            try {
-                const resGaze = await fetch('http://localhost:3000/guardar-gaze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ puntos: acumuladorPuntos, timestamp: Date.now() })
-                });
-                const resClics = await fetch('http://localhost:3000/guardar-clics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datosClics)
-                });
+                const [resGaze, resClics] = await Promise.all([
+                    fetch('/guardar-gaze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(datosGAZE)
+                        }),
+                    fetch('/guardar-clics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(datosCLICS)
+                        })
+                ]);
 
                 if (resGaze.ok && resClics.ok) {
-                    setMensajeEstado("DATOS GUARDADOS ✔");
+                        setMensajeEstado("DATOS GUARDADOS CORRECTAMENTE");
+                    } else {
+                        setMensajeEstado("Error en el servidor" + resGaze.status);
+                    }
+            } catch (error) {
+                console.error("Error conexión:", error);
+                setMensajeEstado("Error de conexión con servidor");
+            }    
+        }
+
+        /*
+         * DATOS DE USUARIO PARA CERRAR SESION
+         */
+        async function confirmarFinalizacion() {
+            // Obtenemos el valor del input de fecha
+            const fechaManual = document.getElementById('user-date').value;
+            // Generamos la hora exacta del sistema
+            const ahora = new Date();
+            const horaExacta = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const userData = {
+                username: document.getElementById('user-name').value,
+                edad: document.getElementById('user-age').value,
+                sexo: document.getElementById('user-sex').value,
+                grupo: document.getElementById('user-group').value,
+                lugar: document.getElementById('user-loc').value,
+                fecha: fechaManual,         // Ejemplo: "2026-01-31"
+                hora_fin: horaExacta,       // Ejemplo: "18:15:05"
+                timestamp: ahora.getTime(), // Formato numérico útil para ordenar datos después
+                sitioFinal: currentSite
+            };
+
+            // nombre usr obligatorio 
+            if (!userData.username) {
+                alert("Por favor, introduce un nombre.");
+                return;
+            }
+
+            try {
+                // 1. Guardamos primero los datos de navegación (opcional si ya lo haces)
+                await exportarJSON(); 
+
+                // 2. Guardamos los datos del usuario en users.json
+                const response = await fetch('/guardar-usuario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    // alert("Sesión finalizada con éxito.");
+                    location.reload(); // Reiniciamos la aplicación
                 } else {
-                    setMensajeEstado("Error en el servidor");
+                    alert("Error al guardar usuario en el servidor.");
                 }
             } catch (error) {
-                setMensajeEstado("Error de conexión");
+                console.error("Error:", error);
+                alert("No se pudo conectar con el servidor.");
             }
         }
 
+        /*
+         * Accion: Finalizar sesión 
+         * guardar datos de usuario de testing
+         */
 
-*/
+        function finalizarSesion() {
+            // Cerramos el menú de control y abrimos el de datos de usuario
+            webgazer.pause();
+            //document.getElementById('controlMenu').style.display = 'none';
+            document.getElementById('modal-usuario').style.display = 'block';
+            // Autorellenar fecha actual
+                const hoy = new Date().toISOString().split('T')[0];
+                document.getElementById('user-date').value = hoy;
+            }
 
-
-/*****. DATOS DE USUARIO PARA CERRAR SESION ***/
-
-async function confirmarFinalizacion() {
- // Obtenemos el valor del input de fecha
-    const fechaManual = document.getElementById('user-date').value;
-    
-    // Generamos la hora exacta del sistema
-    const ahora = new Date();
-    const horaExacta = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    const userData = {
-        username: document.getElementById('user-name').value,
-        edad: document.getElementById('user-age').value,
-        sexo: document.getElementById('user-sex').value,
-        grupo: document.getElementById('user-group').value,
-        lugar: document.getElementById('user-loc').value,
-        fecha: fechaManual,         // Ejemplo: "2026-01-31"
-        hora_fin: horaExacta,       // Ejemplo: "18:15:05"
-        timestamp: ahora.getTime(), // Formato numérico útil para ordenar datos después
-        sitioFinal: currentSite
-    };
-
-    if (!userData.username) {
-        alert("Por favor, introduce un nombre.");
-        return;
-    }
-
-    try {
-        // 1. Guardamos primero los datos de navegación (opcional si ya lo haces)
-        await exportarJSON(); 
-
-        // 2. Guardamos los datos del usuario en users.json
-        const response = await fetch('/guardar-usuario', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData)
-        });
-
-        if (response.ok) {
-            // alert("Sesión finalizada con éxito.");
-            location.reload(); // Reiniciamos la aplicación
-        } else {
-            alert("Error al guardar usuario en el servidor.");
+        /*
+         * Control de ventana modal con datos de usuario
+         */
+        function cerrarModalUser() {
+            document.getElementById('modal-usuario').style.display = 'none';
+            document.getElementById('modal-overlay').style.display = 'none';
+            // Reanudamos el menú de control si el usuario canceló
+            document.getElementById('controlMenu').style.display = 'block';
         }
-    } catch (error) {
-        console.error("Error:", error);
-        alert("No se pudo conectar con el servidor.");
-    }
-}
 
-/**** Finalizar sesión y guardar datos de usuario de prueba ***/ 
-
-function finalizarSesion() {
-    // Cerramos el menú de control y abrimos el de datos de usuario
-    webgazer.pause();
-    //document.getElementById('controlMenu').style.display = 'none';
-    document.getElementById('modal-usuario').style.display = 'block';
-    // Autorellenar fecha actual
-        const hoy = new Date().toISOString().split('T')[0];
-        document.getElementById('user-date').value = hoy;
-    }
-
-/*** Control de ventana modal con datos de usuario ****/
-
-function cerrarModalUser() {
-    document.getElementById('modal-usuario').style.display = 'none';
-    document.getElementById('modal-overlay').style.display = 'none';
-    // Reanudamos el menú de control si el usuario canceló
-    document.getElementById('controlMenu').style.display = 'block';
-}
-
-// Actualiza tu función prepararFinalizacion:
-function prepararFinalizacion() {
-    document.getElementById('controlMenu').style.display = 'none';
-    document.getElementById('modal-usuario').style.display = 'block';
-    document.getElementById('modal-overlay').style.display = 'block';
-}
-
-
-
+        /*
+         * Actualiza tu función prepararFinalizacion
+         */
+        function prepararFinalizacion() {
+            document.getElementById('controlMenu').style.display = 'none';
+            document.getElementById('modal-usuario').style.display = 'block';
+            document.getElementById('modal-overlay').style.display = 'block';
+        }
 
 
     </script>

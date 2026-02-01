@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
+<!--------------------------
+  - GazeMapping : poi.html
+  ------------------------->
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="gazemapping.ico">
@@ -148,8 +151,8 @@
         }
     </style>
 </head>
-<body>
 
+<body>
     <div id="ui-flotante">
         <h2>Editor de POIs</h2>
         <div style="font-size: 11px; color: #2ecc71; margin-bottom: 10px; font-weight: bold;">
@@ -180,13 +183,14 @@
 
     <div id="canvas-container">
         <!---- por defecto 1.png en SITES -->
-        <img src="/sites/1.png" id="background-img" alt="Fondo" onclick="registrarPOI(event)">
+        <img src="sites/1.png" id="background-img" alt="Fondo" onclick="registrarPOI(event)">
         <div id="capa-poi"></div>
     </div>
 
     <script>
         let pois = [];
         let currentSite = 1;
+
         // INICIO: Cargar datos al abrir la página
         window.onload = () => {
             document.getElementById('st-site').innerText = currentSite;
@@ -194,7 +198,9 @@
         };
 
         
-        // --- NAVEGACIÓN ---
+       /*
+        *  NAVEGACIÓN entre sitios 
+        */
        async function cambiarSitio(direccion) {
              if (direccion === 'next') {
                const existe = await existeFichero(currentSite + 1);
@@ -206,7 +212,7 @@
                else return;
             }
             
-            const nuevaRuta = `/sites/${currentSite}.png`;
+            const nuevaRuta = `sites/${currentSite}.png`;
             console.log("cambiando a ", nuevaRuta);
             const img = document.getElementById('background-img');
             // Intentar cargar la siguiente imagen
@@ -222,6 +228,9 @@
             cargarPOIsDeSitioActual();
         }
 
+        /*
+        *  Añadir POI  
+        */        
         function registrarPOI(e) {
             const rect = e.target.getBoundingClientRect();
             const x = Math.floor(e.clientX - rect.left);
@@ -269,7 +278,6 @@
 
         function limpiarTodo(confirmar = true) {
            // if (confirmar && !confirm("¿Estás seguro de borrar todos los puntos?")) return;
-            
             pois = [];
             document.getElementById('capa-poi').innerHTML = '';
             actualizarUI();
@@ -277,50 +285,49 @@
         }
 
       
+        /*
+        *  Recupera y muestra POI desde servidor 
+        *  que están en  /sites/data/poi-n.json   
+        */
+        async function cargarPOIsDeSitioActual() {
+            try {
+                mostrarMensaje("Buscando POIs guardados...");
+                
+                // Enviamos el sitio actual como parámetro (Query String)
+                const response = await fetch(`/obtener-poi?site=${currentSite}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        mostrarMensaje("Sin POIs previos");
+                    }
+                    return;
+                }
 
-  
+                const data = await response.json();
+                
+                // Asumiendo que el servidor devuelve { puntos: [...] }
+                const puntosGuardados = data.puntos || data;
 
-/*** AÑADE POI a la visualización recuperando del servidor 
- * * que están en  /sites/data/poiXX.json  ***/ 
-async function cargarPOIsDeSitioActual() {
-    try {
-        mostrarMensaje("Buscando POIs guardados...");
-        
-        // Enviamos el sitio actual como parámetro (Query String)
-        const response = await fetch(`http://localhost:3000/obtener-poi?site=${currentSite}`);
-        
-        if (!response.ok) {
-            if (response.status === 404) {
-                mostrarMensaje("Sin POIs previos");
+                if (puntosGuardados && puntosGuardados.length > 0) {
+                    // Actualizamos nuestro array local para poder seguir editando
+                    pois = puntosGuardados; 
+                    
+                    // Dibujamos cada punto en la pantalla
+                    pois.forEach(poi => renderizarPunto(poi));
+                    
+                    actualizarUI();
+                    mostrarMensaje(`✅ ${pois.length} puntos cargados`);
+                }
+            } catch (err) {
+                console.error("Error al cargar:", err);
+                mostrarMensaje("Error al conectar con servidor");
             }
-            return;
         }
 
-        const data = await response.json();
-        
-        // Asumiendo que el servidor devuelve { puntos: [...] }
-        const puntosGuardados = data.puntos || data;
 
-        if (puntosGuardados && puntosGuardados.length > 0) {
-            // Actualizamos nuestro array local para poder seguir editando
-            pois = puntosGuardados; 
-            
-            // Dibujamos cada punto en la pantalla
-            pois.forEach(poi => renderizarPunto(poi));
-            
-            actualizarUI();
-            mostrarMensaje(`✅ ${pois.length} puntos cargados`);
-        }
-    } catch (err) {
-        console.error("Error al cargar:", err);
-        mostrarMensaje("Error al conectar con servidor");
-    }
-}
-
-
-
-
-
+        /*
+        *  Almacena POI en  servidor 
+        */
         async function guardarPOIs() {
 
             if (pois.length === 0) {
@@ -337,7 +344,7 @@ async function cargarPOIsDeSitioActual() {
                     suffix: `-${currentSite}`    // El sufijo que generará "clics-1.json"
                     };
 
-            const resPOI = await fetch('http://localhost:3000/guardar-POI', {
+            const resPOI = await fetch('/guardar-POI', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(datosPOI)
@@ -372,7 +379,9 @@ async function cargarPOIsDeSitioActual() {
             }
         }
 
-        // Eventos de teclado
+        /*
+        *  Eventos de teclado 
+        */
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -386,7 +395,6 @@ async function cargarPOIsDeSitioActual() {
                 cambiarSitio('previous');
             }  
 
-            
             if (e.ctrlKey && e.key === 'z') deshacerUltimo();
             
             if (e.key === 's' && (e.ctrlKey || e.metaKey)) {

@@ -1,35 +1,33 @@
-/**
- * api.js - Módulo para la comunicación con el servidor Node.js
+/*
+ * GazeMapping : api.js 
+ * Módulo para la comunicación con el servidor Node.js
  */
 
+// Eliminamos BASE_URL con localhost. Al usar rutas relativas '/', 
+// el navegador usará automáticamente el dominio donde esté alojada la web.
 
-
-const BASE_URL = 'http://localhost:3000';
-
-/**
+/*
  * Comprueba si existe la imagen de un sitio específico en el servidor.
- * @param {number|string} siteId - El ID del sitio (ej: 1, 2, 3)
- * @returns {Promise<Object|null>} - Retorna un objeto con status 'ok' si existe, o null.
  */
 async function comprobarExistenciaSitio(siteId) {
     try {
         const respuesta = await fetch(`/comprobar-sitio/${siteId}`);
-        if (!respuesta.ok) return false;
-        return true;
+        return respuesta.ok;
     } catch (error) {
-        console.error("Error al comprobar existencia de sitio-> no existe", error);
+        console.error("Error al comprobar existencia de sitio:", error);
         return false;
     }
 }
 
+/*
+ * Devuelve número total de usuarios registrados en users.json
+ */
 async function obtenerTotalUsuarios() {
     try {
-        const response = await fetch('http://localhost:3000/total-usuarios');
+        const response = await fetch('/total-usuarios'); // Ruta relativa
         
-        // Verificamos si la respuesta es realmente JSON
         const contentType = response.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
-            console.error("El servidor no devolvió JSON, sino:", contentType);
             return 0;
         }
 
@@ -41,29 +39,27 @@ async function obtenerTotalUsuarios() {
     }
 }
 
-
-/*** Comprobar fichero si existe  ****/
-// Reemplaza tu función actual por esta versión para el navegador
+/*
+ * Comprobar si existe el archivo de imagen físicamente
+ */
 async function existeFichero(n) {
-    const nombreArchivo = `${n}.png`;
-    const rutaImagen = `sites/${nombreArchivo}`; // Ruta relativa a tu carpeta web
+    const rutaImagen = `sites/${n}.png`; 
 
     try {
+        // Usamos HEAD para no descargar la imagen completa, solo verificar si está
         const respuesta = await fetch(rutaImagen, { method: 'HEAD' });
-        return respuesta.ok; // Devuelve true si el archivo existe (status 200)
+        return respuesta.ok; 
     } catch (error) {
         return false;
     }
 }
 
-
-/**
- * Obtiene los datos de Gaze (mirada) desde el servidor.
- * @returns {Promise<Array>}
+/*
+ * Obtiene los datos de Gaze (mirada) filtrados por sitio
  */
-async function obtenerDatosGaze() {
+async function obtenerDatosGaze(siteId = 1) {
     try {
-        const response = await fetch(`${BASE_URL}/obtener-datos`);
+        const response = await fetch(`/obtener-datos?site=${siteId}`);
         return await response.json();
     } catch (error) {
         console.error("Error al obtener datos gaze:", error);
@@ -71,12 +67,12 @@ async function obtenerDatosGaze() {
     }
 }
 
-/**
- * Obtiene los clics registrados.
+/*
+ * Obtiene los clics registrados filtrados por sitio
  */
-async function obtenerDatosClics() {
+async function obtenerDatosClics(siteId = 1) {
     try {
-        const response = await fetch(`${BASE_URL}/obtener-clics`);
+        const response = await fetch(`/obtener-clics?site=${siteId}`);
         return await response.json();
     } catch (error) {
         console.error("Error al obtener clics:", error);
@@ -84,13 +80,14 @@ async function obtenerDatosClics() {
     }
 }
 
-/**
- * Obtiene los POIs (Puntos de Interés).
+/*
+ * Obtiene los POIs (Puntos de Interés) filtrados por sitio
  */
-async function obtenerDatosPOIs() {
+async function obtenerDatosPOIs(siteId = 1) {
     try {
-        const response = await fetch(`${BASE_URL}/obtener-poi`);
+        const response = await fetch(`/obtener-poi?site=${siteId}`);
         const data = await response.json();
+        // Manejamos si el servidor devuelve el objeto envuelto o el array directo
         return data.puntos || data;
     } catch (error) {
         console.error("Error al obtener POIs:", error);
