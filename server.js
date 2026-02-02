@@ -83,8 +83,8 @@ const guardarArchivoJSON = (fileName, datos, res) => {
 
     try {
         // Asegurar que el directorio existe
-        if (!existsSync(directorio)) {
-            mkdirSync(directorio, { recursive: true });
+        if (!fs.existsSync(directorio)) {
+            fs.mkdirSync(directorio, { recursive: true });
         }
 
         const contenido = JSON.stringify(datos, null, 2);
