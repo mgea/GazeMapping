@@ -33,8 +33,60 @@ GazeMapping es una aplicación web que permite de modo **local** y usando la **w
 Está organizada en 3 módulos: 
 
 * **Captura** de datos (testing.html)
+
 * **Edición de Puntos de Interés (POI)** para incluir referencias de áreas de atencion para el experimento  (poi.html)
+
 * **Visualización de Heatmaps** (heatmap.html)
+
+  
+
+### ¿Cuando usar? 
+
+Esta Aplicacion Web está especialmente diseñada para las prácticas de [[Diseño de Interfaces de Usuario de la ETSIIT de Univesidad de Granada]](https://www.ugr.es/estudiantes/grados/grado-ingenieria-informatica/diseno-interfaces-usuario-ing-software) 
+
+En concreto se podra usar dentro del **caso de estudio UX** siguiendo esta plantilla [UX Case Study (DIU)](https://github.com/mgea/UX_caseStudy)
+
+Más información en repo de asignatura [DIU](https://github.com/mgea/DIU)
+
+### Instalación 
+
+Se recomienda usar localmente, pasos: 
+
+* **Descarga el código:** Clona el repositorio o descarga el ZIP desde GitHub.
+
+* **Terminal:** Entra en la carpeta raíz del proyecto (`GazeMapping`).
+
+* **Instala las dependencias:** Ejecuta el siguiente comando para instalar Express, Cors y demás librerías necesarias: ``npm install``
+* **Organización de contenido**
+
+El servidor espera encontrar una estructura específica para no lanzar errores de ruta. Asegúrate de que tu carpeta se vea así:
+
+```
+/GazeMapping
+├── server.js
+├── package.json
+└── /public
+    ├── index.html
+    ├── poi.html (el editor de POIs)
+    ├── api.js
+    └── /sites
+        ├── 1.png (imagen de prueba)
+        ├── users.json (se creará solo)
+        └── /data
+            └── (aquí se guardarán los .json de gaze, clics y poi)
+```
+
+* **Lanzar el Servidor**
+
+​	En la misma terminal, arranca el backend con Node. 
+
+```
+node server.js
+```
+
+​	Si todo está correcto, ya está disponible el puerto http://localhost:3000
+
+* Añade las imágenes de los sitios a analizar en ``/public/sites/1.png``...
 
 
 
