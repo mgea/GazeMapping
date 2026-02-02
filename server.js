@@ -190,7 +190,7 @@ app.get('/obtener-poi', (req, res) => {
 
 /*
  *  Guardar datos usuarios de sesión 
- * Se almacena en /public/site/users.json
+ * Se almacena en /public/sites/users.json
  * (se crea si no existe y se van añadiendo)
  */
 app.post('/guardar-usuario', (req, res) => {
@@ -245,19 +245,10 @@ app.get('/exportar-usuarios-json', (req, res) => {
     const filePath = path.join(PUBLIC_PATH, 'sites', 'users.json');
 
     if (!fs.existsSync(filePath)) return res.json([]);
-    res.download(filePath, `usuarios_gaze_${Date.now()}.json`);
-
-    // Si el archivo no existe físicamente
-    /*
-    if (!fs.existsSync(filePath)) {
-        // En lugar de 500, enviamos un JSON vacío para que no explote el navegador
-        res.setHeader('Content-Type', 'application/json');
-        return res.send(JSON.stringify([]));
-    }
-    */
-
-    // Forzamos al navegador a descargar el archivo en lugar de abrirlo
+     // Forzamos al navegador a descargar el archivo en lugar de abrirlo
     res.download(filePath, `usuarios_gazemapping_${Date.now()}.json`);
+
+
 });
 
 /*
@@ -290,7 +281,7 @@ app.get('/exportar-usuarios-csv', (req, res) => {
 
 // Ruta para servir el index o about si entran a la raíz
 app.get('/', (req, res) => {
-    res.sendFile(join(PUBLIC_PATH, 'index.html'));
+    res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
 });
 
 

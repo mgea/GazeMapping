@@ -225,7 +225,7 @@
             limpiarTodo(false); 
 
             // 2. Intentamos cargar los POIs guardados para este sitio específico
-            cargarPOIsDeSitioActual();
+            await cargarPOIsDeSitioActual();
         }
 
         /*
@@ -341,7 +341,7 @@
             try {
              const datosPOI = {
                     puntos: pois,          // El array con los datos
-                    suffix: `-${currentSite}`    // El sufijo que generará "clics-1.json"
+                    suffix: `${currentSite}`    // El sufijo que generará "clics-1.json"
                     };
 
             const resPOI = await fetch('/guardar-POI', {
