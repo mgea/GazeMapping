@@ -112,6 +112,7 @@ Es la herramienta de análisis visual donde se transforman los datos en informac
 ### Bugs y futuras mejoras
 
 * **No responsive testing**. Errror al redimensionar la pantalla en experimento. Se aconseja dejar siempre a mismo tamaño para no interferir en captura de datos 
+* **No adaptado a móvil**, las teclas y el espacio de visualización esta pensados para pantallas FHD con webcam
 
 
 
