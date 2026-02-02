@@ -2,7 +2,7 @@
  * server.js - GazeMapping Backend
  * Optimizado para Render.com
  *   Web Eye Tracking Analysis & Heatmap Visualization tool 
- * version 1.0, Junio 2026 
+ * version 1.0, 2-Feb-2026 
  * autor: Miguel Gea
  *  
  * repo:        https://github.com/mgea/GazeMapping
@@ -17,18 +17,19 @@
  */
 
 import express from 'express';
-import { existsSync, mkdirSync, writeFile, readFile } from 'fs';
-import { join, dirname } from 'path';
+// import { existsSync, mkdirSync, writeFile, readFile } from 'fs';
+import fs from 'fs'; // Importamos el objeto completo para usar fs.existsSync, etc.
+import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 
 // Configuración necesaria para ES Modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const PUBLIC_PATH = join(__dirname, 'public');
+const PUBLIC_PATH = path.join(__dirname, 'public');  // la ruta comienza en /public 
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -50,7 +51,7 @@ app.get('/comprobar-sitio/:id', (req, res) => {
     const siteId = req.params.id;
     const nombreArchivo = `${siteId}.png`;
     // Construimos la ruta hacia la carpeta de imágenes de los sitios
-    const rutaImagen = join(PUBLIC_PATH, 'sites', nombreArchivo);
+    const rutaImagen = path.join(PUBLIC_PATH, 'sites', nombreArchivo);
 
     try {
         const stats = stat(rutaImagen);
@@ -72,8 +73,8 @@ app.get('/comprobar-sitio/:id', (req, res) => {
  */
 
 const guardarArchivoJSON = (fileName, datos, res) => {
-    const rutaAbsoluta = join(PUBLIC_PATH, 'sites', 'data', fileName);
-    const directorio = dirname(rutaAbsoluta);
+    const rutaAbsoluta = path.join(PUBLIC_PATH, 'sites', 'data', fileName);
+    const directorio = path.dirname(rutaAbsoluta);
    
     // Validar que los datos existan
     if (!datos) {
@@ -88,7 +89,7 @@ const guardarArchivoJSON = (fileName, datos, res) => {
 
         const contenido = JSON.stringify(datos, null, 2);
 
-        writeFile(rutaAbsoluta, contenido, (err) => {
+        fs.writeFile(rutaAbsoluta, contenido, (err) => {
             if (err) {
                 console.error("❌ ERROR FS:", err.message);
                 return res.status(500).json({ 
@@ -108,18 +109,18 @@ const guardarArchivoJSON = (fileName, datos, res) => {
 
 
 app.post('/guardar-POI', (req, res) => {
-    const fileName = `poi${req.body.suffix || ''}.json`;
+    const fileName = `poi-${req.body.suffix || ''}.json`;
     guardarArchivoJSON(fileName, req.body.puntos, res);
 });
 
 
 app.post('/guardar-gaze', (req, res) => {
-    const fileName = `gaze${req.body.suffix || ''}.json`;
+    const fileName = `gaze-${req.body.suffix || ''}.json`;
     guardarArchivoJSON(fileName, req.body.puntos, res);
 });
 
 app.post('/guardar-clics', (req, res) => {
-    const fileName = `clics${req.body.suffix || ''}.json`;
+    const fileName = `clics-${req.body.suffix || ''}.json`;
     guardarArchivoJSON(fileName, req.body.puntos, res);
 });
 
@@ -131,7 +132,7 @@ app.post('/guardar-clics', (req, res) => {
  */
 app.get('/obtener-datos', (req, res) => {
     const suffix = req.query.site || '';
-    const filePath = join(__dirname, 'public', 'sites', 'data', `gaze-${suffix}.json`);
+    const filePath = path.join(PUBLIC_PATH,  'sites', 'data', `gaze-${suffix}.json`);
     
     // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
     if (!fs.existsSync(filePath)) {
@@ -140,14 +141,8 @@ app.get('/obtener-datos', (req, res) => {
     }
 
     fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).json({ error: "Error al leer el archivo" });
-        }
-        try {
-            res.json(JSON.parse(data));
-        } catch (e) {
-            res.status(500).json({ error: "JSON corrupto" });
-        }
+        if (err) return res.status(500).json({ error: "Error" });
+        try { res.json(JSON.parse(data)); } catch (e) { res.json([]); }
     });
 
 });
@@ -161,23 +156,15 @@ app.get('/obtener-clics', (req, res) => {
     const suffix = req.query.site || '1'; // 1 por defecto
 
     // Busca archivos como clics-1.json, clics-2.json
-    const filePath = join(__dirname, 'public', 'sites', 'data', `clics-${site}.json`);
+    const filePath = path.join(PUBLIC_PATH,  'sites', 'data', `clics-${suffix}.json`);
 
         // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
-    if (!fs.existsSync(filePath)) {
-        console.log(`No hay datos de Clics para Sitio ${suffix} `);
-        return res.json([]); 
-    }
+    if (!fs.existsSync(filePath)) return res.json([]);
+        
 
     fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).json({ error: "Error al leer el archivo" });
-        }
-        try {
-            res.json(JSON.parse(data));
-        } catch (e) {
-            res.status(500).json({ error: "JSON corrupto" });
-        }
+        if (err) return res.status(500).json({ error: "Error" });
+        try { res.json(JSON.parse(data)); } catch (e) { res.json([]); }
     });
 });
 
@@ -188,23 +175,14 @@ app.get('/obtener-clics', (req, res) => {
  */
 app.get('/obtener-poi', (req, res) => {
     const suffix = req.query.site || '1'; // 1 por defecto
-    const filePath = join(__dirname, 'public', 'sites', 'data', `poi-${suffix}.json`);
+    const filePath = path.join(PUBLIC_PATH,  'sites', 'data', `poi-${suffix}.json`);
 
     // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
-    if (!fs.existsSync(filePath)) {
-        console.log(`No hay datos de POI para Sitio ${suffix} `);
-        return res.json([]); 
-    }
+    if (!fs.existsSync(filePath)) return res.json([]);
 
-    fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).json({ error: "Error al leer el archivo" });
-        }
-        try {
-            res.json(JSON.parse(data));
-        } catch (e) {
-            res.status(500).json({ error: "JSON corrupto" });
-        }
+   fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) return res.status(500).json({ error: "Error" });
+        try { res.json(JSON.parse(data)); } catch (e) { res.json([]); }
     });
 
 });
@@ -217,20 +195,17 @@ app.get('/obtener-poi', (req, res) => {
  */
 app.post('/guardar-usuario', (req, res) => {
     const nuevoUsuario = req.body;
-    const filePath = join(__dirname, 'public', 'sites',  `users.json`);
+    const filePath = path.join(PUBLIC_PATH,  'sites',  `users.json`);
 
     // Leer el archivo actual (o crear uno vacío si no existe)
-    readFile(filePath, 'utf8', (err, data) => {
+    fs.readFile(filePath, 'utf8', (err, data) => {
         let listaUsuarios = [];
         if (!err && data) {
-            listaUsuarios = JSON.parse(data);
+            try { listaUsuarios = JSON.parse(data); } catch(e) {}
         }
-
         listaUsuarios.push(nuevoUsuario);
-
-        // Guardar la lista actualizada
-        writeFile(filePath, JSON.stringify(listaUsuarios, null, 2), (err) => {
-            if (err) return res.status(500).send("Error escribiendo archivo");
+        fs.writeFile(filePath, JSON.stringify(listaUsuarios, null, 2), (err) => {
+            if (err) return res.status(500).send("Error");
             res.send("Usuario guardado");
         });
     });
@@ -241,9 +216,15 @@ app.post('/guardar-usuario', (req, res) => {
  * Normalmente el heatmap acumula datos de más de una visita
  */
 app.get('/total-usuarios', (req, res) => {
-    const filePath = join(__dirname, 'public', 'sites', 'users.json');
+    const filePath = path.join(PUBLIC_PATH,  'sites', 'users.json');
 
-    readFile(filePath, 'utf8', (err, data) => {
+    // Si el archivo no existe físicamente
+    if (!fs.existsSync(filePath)) {
+        return res.json({ total: 0 }); // Si no existe el archivo, devolver 0
+    }
+
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
         if (err || !data) {
             return res.json({ total: 0 }); // Si no existe el archivo, devolver 0
         }
@@ -261,14 +242,19 @@ app.get('/total-usuarios', (req, res) => {
  * Descarga datos de usuarios 
  */
 app.get('/exportar-usuarios-json', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
+    const filePath = path.join(PUBLIC_PATH, 'sites', 'users.json');
+
+    if (!fs.existsSync(filePath)) return res.json([]);
+    res.download(filePath, `usuarios_gaze_${Date.now()}.json`);
 
     // Si el archivo no existe físicamente
-    if (!filePath.existsSync(filePath)) {
+    /*
+    if (!fs.existsSync(filePath)) {
         // En lugar de 500, enviamos un JSON vacío para que no explote el navegador
         res.setHeader('Content-Type', 'application/json');
         return res.send(JSON.stringify([]));
     }
+    */
 
     // Forzamos al navegador a descargar el archivo en lugar de abrirlo
     res.download(filePath, `usuarios_gazemapping_${Date.now()}.json`);
@@ -279,29 +265,26 @@ app.get('/exportar-usuarios-json', (req, res) => {
  * Descarga datos de usuarios 
  */
 app.get('/exportar-usuarios-csv', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
+    const filePath = path.join(PUBLIC_PATH,  'sites', 'users.json');
 
    // Si el archivo no existe físicamente
-    if (!filePath.existsSync(filePath)) {
-        // En lugar de 500, enviamos un JSON vacío para que no explote el navegador
-        res.setHeader('Content-Type', 'application/json');
-        return res.send(JSON.stringify([]));
-    }
-    const rawData = fs.readFileSync(filePath);
-    const usuarios = JSON.parse(rawData);
+   if (!fs.existsSync(filePath)) return res.json([]);
+   try {
+        const rawData = fs.readFileSync(filePath);
+        const usuarios = JSON.parse(rawData);
+        if (usuarios.length === 0) return res.send("Archivo vacío");
 
-    if (usuarios.length === 0) return res.send("Archivo vacío");
+        const fields = Object.keys(usuarios[0]);
+        const csv = [
+            fields.join(','),
+            ...usuarios.map(u => fields.map(f => `"${u[f] || ''}"`).join(','))
+        ].join('\n');
 
-    // Crear cabeceras del CSV basadas en las llaves del primer objeto
-    const fields = Object.keys(usuarios[0]);
-    const csv = [
-        fields.join(','), // Cabecera: id,nombre,timestamp...
-        ...usuarios.map(u => fields.map(f => `"${u[f]}"`).join(',')) // Datos
-    ].join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=usuarios.csv');
+        res.status(200).send(csv);
+    } catch (e) { res.status(500).send("Error procesando CSV"); }
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=usuarios_gaze.csv');
-    res.status(200).send(csv);
 });
 
 
@@ -312,5 +295,5 @@ app.get('/', (req, res) => {
 
 
 app.listen(PORT, () => {
-    console.log(`🚀 GazeMapping Online: Port ${PORT}`);
+    console.log(`GazeMapping Online: Port ${PORT}`);
 });

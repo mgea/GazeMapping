@@ -191,6 +191,17 @@
 
         .divider { height: 1px; background: #eee; margin: 15px 0; }
 
+        .bt-users {
+            font-style: italic;
+            }
+        .bt-users:disabled {
+            background-color: #ccc !important; /* Gris */
+            cursor: not-allowed;               /* Icono de prohibido */
+            background: #333; 
+            color: #aaa;
+            opacity: 0.6;                      /* Transparencia */
+            }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
             to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -215,14 +226,14 @@
         <div class="divider"></div>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-            <button id="btn-clics" class="btn-main btn-dark" onclick="toggleClics()">🖱️ Clics</button>
-            <button id="btn-pois" class="btn-main btn-dark" onclick="togglePOIs()">📍 POIs</button>
+            <button id="btn-clics" class="btn-main btn-grey" onclick="toggleClics()">🖱️ Clics</button>
+            <button id="btn-pois" class="btn-main btn-grey" onclick="togglePOIs()">📍 POIs</button>
         </div>
         <button class="btn-main btn-grey" onclick="limpiarTodoVisual()" style="margin-top:15px">Limpiar Todo</button>
        
         <button class="btn-main btn-blue" onclick="toggleAjustes()" style="margin-top:15px">⚙️ Configurar JPG</button>
-        <button class="btn-main btn-blue" onclick="window.location.href='/exportar-usuarios-json'">  Exportar Ususarios (JSON)</button>
-        <button class="btn-main btn-blue" onclick="window.location.href='/exportar-usuarios-csv'"> Exportar Usuarios EXCEL (CSV) </button>
+        <button class="btn-main btn-blue save_users" onclick="window.location.href='/exportar-usuarios-json'">  Exportar Ususarios (JSON)</button>
+        <button class="btn-main btn-blue save_users" onclick="window.location.href='/exportar-usuarios-csv'"> Exportar Usuarios EXCEL (CSV) </button>
 
         <div id="status">Listo</div>
         <div id="stats">
@@ -285,24 +296,41 @@
         const ctx = canvas.getContext('2d');
         const bgImg = new Image();
         let eyeData = [];
-        /*** por defecto ***/ 
-        bgImg.src = './sites/1.png'; 
+
+        /*** por defecto CARGA 1.PNG de /sites, habría que comprobar si está ***/ 
+        bgImg.src = 'sites/1.png'; 
+        // cargamos imagen 
         bgImg.onload = () => {
             canvas.width = bgImg.width;
             canvas.height = bgImg.height;
-            renderAll();
-        }
-
-        /*
-         *  obtener datos de usuarios, fichero users.json 
-         */        
-        (async () => {
-            const total = await obtenerTotalUsuarios();
-            console.log(total);
-            const el = document.getElementById('st-users');
-            if (el) el.innerText = total;
-            })();
+            renderAll();  
+            }
         
+            
+    /*
+     * INICIALIZAR CONTENIDO 
+     *  Funcion que se llama cuando se inicializa el DOM 
+     * Actualiza numero de usuarios que hubiera en users.json para mostrar en panel ventana
+     */    
+    document.addEventListener('DOMContentLoaded', async () => {
+            (async () => {
+                const total = await obtenerTotalUsuarios();
+                const el = document.getElementById('st-users');
+                if (el) el.innerText = total;
+                if (total ==0) { // no hay usuarios desactivamos opciones de exportar 
+                const btnGuardar = document.querySelectorAll('.save_users');
+                btnGuardar.forEach(boton => {
+                    boton.disabled = true;   // desactiva el clic, no hay usuarios que salvar
+                    boton.style.fontStyle = 'italic';
+                    boton.classList.add('btn-grey');   // Añade el color gris definido en CSS
+                    boton.innerText = "No disponible: Sin usuarios"; // Opcional: cambiar el texto
+                    });
+                }
+
+            })();            
+    }); // end existe 
+
+            
     /*
      *  Funcion CONMUTADOR PARA BOTON DE VER CLICS 
      */    
