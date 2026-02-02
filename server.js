@@ -261,7 +261,7 @@ app.get('/total-usuarios', (req, res) => {
  * Descarga datos de usuarios 
  */
 app.get('/exportar-usuarios-json', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', 'users.json');
+    const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
 
     if (!fs.existsSync(filePath)) {
         return res.status(404).send("No hay usuarios registrados todavía.");
@@ -276,7 +276,7 @@ app.get('/exportar-usuarios-json', (req, res) => {
  * Descarga datos de usuarios 
  */
 app.get('/exportar-usuarios-csv', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'sites', 'data', 'users.json');
+    const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
 
     if (!fs.existsSync(filePath)) return res.status(404).send("Sin datos.");
 
