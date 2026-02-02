@@ -263,8 +263,11 @@ app.get('/total-usuarios', (req, res) => {
 app.get('/exportar-usuarios-json', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
 
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).send("No hay usuarios registrados todavía.");
+    // Si el archivo no existe físicamente
+    if (!filePath.existsSync(filePath)) {
+        // En lugar de 500, enviamos un JSON vacío para que no explote el navegador
+        res.setHeader('Content-Type', 'application/json');
+        return res.send(JSON.stringify([]));
     }
 
     // Forzamos al navegador a descargar el archivo en lugar de abrirlo
@@ -278,8 +281,12 @@ app.get('/exportar-usuarios-json', (req, res) => {
 app.get('/exportar-usuarios-csv', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'sites', 'users.json');
 
-    if (!fs.existsSync(filePath)) return res.status(404).send("Sin datos.");
-
+   // Si el archivo no existe físicamente
+    if (!filePath.existsSync(filePath)) {
+        // En lugar de 500, enviamos un JSON vacío para que no explote el navegador
+        res.setHeader('Content-Type', 'application/json');
+        return res.send(JSON.stringify([]));
+    }
     const rawData = fs.readFileSync(filePath);
     const usuarios = JSON.parse(rawData);
 
