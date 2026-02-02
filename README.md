@@ -97,10 +97,23 @@ Es la herramienta de análisis visual donde se transforman los datos en informac
 - **Capas de Visualización:**
   - **Botón Clics:** Activa/desactiva la visualización de los clics realizados por los usuarios (puntos amarillos) 
   - **Botón POIs:** Muestra los puntos estratégicos que definiste en el editor (puntos verdes) 
+  - **Limpiar todo** elimina todos los datos cargados en visualización
 - **Ajustes Técnicos (Configurar JPG):**
   - **Escala/Desplazamiento:** Ajusta las coordenadas si notas que los datos están movidos respecto a la imagen de fondo.
   - **Radio de Calor:** Aumenta o disminuye el tamaño de las "manchas" de calor según la precisión que busques.
-- **Exportación:** Pulsa **📸 GUARDAR JPG** para descargar una captura completa que incluya el fondo, el mapa de calor y las capas de clics/POIs activas.
+- **Exportación:** Pulsa **GUARDAR JPG** para descargar una captura completa que incluya el fondo, el mapa de calor y las capas de clics/POIs activas.
+
+
+
+
+
+----
+
+### Bugs y futuras mejoras
+
+* **No responsive testing**. Errror al redimensionar la pantalla en experimento. Se aconseja dejar siempre a mismo tamaño para no interferir en captura de datos 
+
+
 
 
 

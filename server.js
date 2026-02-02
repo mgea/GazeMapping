@@ -133,49 +133,52 @@ app.get('/obtener-datos', (req, res) => {
     const suffix = req.query.site || '';
     const filePath = join(__dirname, 'public', 'sites', 'data', `gaze-${suffix}.json`);
     
-     if (existsSync(filePath)) {
-        const contenido = readFileSync(filePath, 'utf8');
-        console.log("encontrado", filePath);
-        res.json(JSON.parse(contenido));
-    } else {
-        console.log("❌ No se encontró en:", filePath);
-        res.status(404).send("Archivo no encontrado");
+    // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
+    if (!fs.existsSync(filePath)) {
+        console.log(`No hay datos de Gaze para Sitio ${suffix} `);
+        return res.json([]); 
     }
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: "Error al leer el archivo" });
+        }
+        try {
+            res.json(JSON.parse(data));
+        } catch (e) {
+            res.status(500).json({ error: "JSON corrupto" });
+        }
+    });
+
 });
+
 
 /*
  *  Obtener datos clics 
  * (ahora acepta query params para el sufijo)
  */
 app.get('/obtener-clics', (req, res) => {
-    const suffix = req.query.site || '';
-    const filePath = join(__dirname, 'public', 'sites', 'data', `clics-${suffix}.json`);
-    
-    if (existsSync(filePath)) {
-        const contenido = readFileSync(filePath, 'utf8');
-        console.log("encontrado", filePath);
-        res.json(JSON.parse(contenido));
-    } else {
-        console.log("❌ No se encontró en:", filePath);
-        res.status(404).send("Archivo no encontrado");
-    }
-});
+    const suffix = req.query.site || '1'; // 1 por defecto
 
-/*
- *  Obtener datos clics 
- * (ahora acepta query params para el sufijo)
- */
-app.get('/obtener-clics', (req, res) => {
-    const site = req.query.site;
     // Busca archivos como clics-1.json, clics-2.json
     const filePath = join(__dirname, 'public', 'sites', 'data', `clics-${site}.json`);
 
-    if (existsSync(filePath)) {
-        const contenido = readFileSync(filePath, 'utf8');
-        res.json(JSON.parse(contenido));
-    } else {
-        res.status(404).send("No hay datos");
+        // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
+    if (!fs.existsSync(filePath)) {
+        console.log(`No hay datos de Clics para Sitio ${suffix} `);
+        return res.json([]); 
     }
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: "Error al leer el archivo" });
+        }
+        try {
+            res.json(JSON.parse(data));
+        } catch (e) {
+            res.status(500).json({ error: "JSON corrupto" });
+        }
+    });
 });
 
 
@@ -184,18 +187,26 @@ app.get('/obtener-clics', (req, res) => {
  * (ahora acepta query params para el sufijo)
  */
 app.get('/obtener-poi', (req, res) => {
-    const suffix = req.query.site || '';
+    const suffix = req.query.site || '1'; // 1 por defecto
     const filePath = join(__dirname, 'public', 'sites', 'data', `poi-${suffix}.json`);
-    
-    if (existsSync(filePath)) {
-        const contenido = readFileSync(filePath, 'utf8');
-        console.log("encontrado");
-        res.json(JSON.parse(contenido));
-    } else {
-        console.log("nombre obtener-poi", filePath, "sufijo=", suffix);
-        console.log("❌ No se encontró en:", filePath);
-        res.status(404).send("Archivo no encontrado");
+
+    // VERIFICACIÓN FICHERO: Si no existe, enviamos [] en lugar de un error de texto
+    if (!fs.existsSync(filePath)) {
+        console.log(`No hay datos de POI para Sitio ${suffix} `);
+        return res.json([]); 
     }
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: "Error al leer el archivo" });
+        }
+        try {
+            res.json(JSON.parse(data));
+        } catch (e) {
+            res.status(500).json({ error: "JSON corrupto" });
+        }
+    });
+
 });
 
 
@@ -244,6 +255,48 @@ app.get('/total-usuarios', (req, res) => {
         }
     });
 });
+
+/*
+ * Exportar Usuarios JSON 
+ * Descarga datos de usuarios 
+ */
+app.get('/exportar-usuarios-json', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'sites', 'data', 'users.json');
+
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).send("No hay usuarios registrados todavía.");
+    }
+
+    // Forzamos al navegador a descargar el archivo en lugar de abrirlo
+    res.download(filePath, `usuarios_gazemapping_${Date.now()}.json`);
+});
+
+/*
+ * Exportar Usuarios CSV 
+ * Descarga datos de usuarios 
+ */
+app.get('/exportar-usuarios-csv', (req, res) => {
+    const filePath = path.join(__dirname, 'public', 'sites', 'data', 'users.json');
+
+    if (!fs.existsSync(filePath)) return res.status(404).send("Sin datos.");
+
+    const rawData = fs.readFileSync(filePath);
+    const usuarios = JSON.parse(rawData);
+
+    if (usuarios.length === 0) return res.send("Archivo vacío");
+
+    // Crear cabeceras del CSV basadas en las llaves del primer objeto
+    const fields = Object.keys(usuarios[0]);
+    const csv = [
+        fields.join(','), // Cabecera: id,nombre,timestamp...
+        ...usuarios.map(u => fields.map(f => `"${u[f]}"`).join(',')) // Datos
+    ].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=usuarios_gaze.csv');
+    res.status(200).send(csv);
+});
+
 
 // Ruta para servir el index o about si entran a la raíz
 app.get('/', (req, res) => {
