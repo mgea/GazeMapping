@@ -42,9 +42,9 @@ Está organizada en 3 módulos:
 
 ### ¿Cuando usar? 
 
-Esta Aplicacion Web está especialmente diseñada para las prácticas de [[Diseño de Interfaces de Usuario de la ETSIIT de Univesidad de Granada]](https://www.ugr.es/estudiantes/grados/grado-ingenieria-informatica/diseno-interfaces-usuario-ing-software) 
+Esta Aplicacion Web está especialmente diseñada para las prácticas de [Diseño de Interfaces de Usuario de la ETSIIT de Univesidad de Granada](https://www.ugr.es/estudiantes/grados/grado-ingenieria-informatica/diseno-interfaces-usuario-ing-software) 
 
-En concreto se podra usar dentro del **caso de estudio UX** siguiendo esta plantilla [UX Case Study (DIU)](https://github.com/mgea/UX_caseStudy)
+En concreto, se recomienda usar dentro del **caso de estudio UX** siguiendo esta plantilla [UX Case Study (DIU)](https://github.com/mgea/UX_caseStudy)
 
 Más información en repo de asignatura [DIU](https://github.com/mgea/DIU)
 
@@ -144,9 +144,13 @@ Este módulo registra el comportamiento del usuario en tiempo real.
 
 Es la herramienta de análisis visual donde se transforman los datos en información accionable.
 
-- **Carga de Datos:** 1.  Selecciona el sitio con las flechas <kbd>←</kbd> <kbd>→</kbd>.
-  2. Pulsa **CARGAR HEATMAP** para traer los datos de la mirada desde el servidor.
+- **Carga de Datos:** 
+  
+  * Selecciona el sitio con las flechas <kbd>←</kbd> <kbd>→</kbd>.
+  
+  - Pulsa **CARGAR HEATMAP** para traer los datos de la mirada desde el servidor.
 - **Capas de Visualización:**
+
   - **Botón Clics:** Activa/desactiva la visualización de los clics realizados por los usuarios (puntos amarillos) 
   - **Botón POIs:** Muestra los puntos estratégicos que definiste en el editor (puntos verdes) 
   - **Limpiar todo** elimina todos los datos cargados en visualización
