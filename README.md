@@ -57,6 +57,8 @@ Se recomienda usar localmente, pasos:
 * **Terminal:** Entra en la carpeta raíz del proyecto (`GazeMapping`).
 
 * **Instala las dependencias:** Ejecuta el siguiente comando para instalar Express, Cors y demás librerías necesarias: ``npm install``
+
+* Si no ha detectado nodemon se instala en carpeta del proyecto -> ``npm install --save-dev nodemon``
 * **Organización de contenido**
 
 El servidor espera encontrar una estructura específica para no lanzar errores de ruta. Asegúrate de que tu carpeta se vea así:
