@@ -59,6 +59,9 @@ Se recomienda usar localmente, pasos:
 * **Instala las dependencias:** Ejecuta el siguiente comando para instalar Express, Cors y demás librerías necesarias: ``npm install``
 
 * Si no ha detectado nodemon se instala en carpeta del proyecto -> ``npm install --save-dev nodemon``
+* Lanzar servidor: ``npm run dev``
+
+
 * **Organización de contenido**
 
 El servidor espera encontrar una estructura específica para no lanzar errores de ruta. Asegúrate de que tu carpeta se vea así:
